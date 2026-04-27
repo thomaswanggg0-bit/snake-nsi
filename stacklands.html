@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Stacklands — Fan Game</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;}
+body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
+#hud{background:#0f2310;border-bottom:2px solid #2d5a2d;padding:8px 14px;display:flex;align-items:center;gap:16px;flex-shrink:0;z-index:100;}
+#moon-wrap{flex:1;height:18px;background:#0a1a0a;border-radius:9px;overflow:hidden;border:1px solid #2d5a2d;}
+#moon-fill{height:100%;width:0%;background:linear-gradient(90deg,#f7d060,#e94560);border-radius:9px;}
+.stat{color:#ccc;font-size:13px;white-space:nowrap;}
+.stat b{color:#fff;}
+#table{flex:1;position:relative;overflow:hidden;background:#1e4a1e;background-image:radial-gradient(circle at 1px 1px,#265226 1px,transparent 0);background-size:28px 28px;cursor:default;}
+.card{position:absolute;width:82px;height:104px;border-radius:9px;cursor:grab;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(0,0,0,0.25);box-shadow:0 3px 8px rgba(0,0,0,0.4);transition:box-shadow .1s;}
+.card:hover{box-shadow:0 0 0 2px #f7d060,0 3px 8px rgba(0,0,0,0.4);}
+.card.dragging{box-shadow:0 10px 24px rgba(0,0,0,0.7);z-index:9999!important;cursor:grabbing;}
+.card-emoji{font-size:30px;margin-bottom:3px;pointer-events:none;}
+.card-name{font-size:10px;font-weight:700;text-align:center;padding:0 4px;line-height:1.2;pointer-events:none;}
+.card-bar{position:absolute;bottom:0;left:0;right:0;height:5px;background:rgba(0,0,0,0.2);border-radius:0 0 7px 7px;overflow:hidden;display:none;}
+.card-bar-fill{height:100%;background:#4ade80;width:0%;}
+#shop{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:7px;z-index:100;}
+.pbtn{background:#c0392b;color:#fff;border:none;border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 8px rgba(0,0,0,0.4);}
+.pbtn:hover{background:#a93226;}
+.pbtn:disabled{background:#555;cursor:not-allowed;}
+#log{position:absolute;bottom:12px;left:12px;z-index:100;max-width:240px;}
+.litem{background:rgba(0,0,0,.75);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;margin-bottom:4px;animation:fi .3s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;justify-content:center;align-items:center;flex-direction:column;color:#fff;gap:16px;}
+#overlay h2{font-size:44px;}
+#overlay p{font-size:18px;color:#ccc;}
+#overlay button{background:#c0392b;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:16px;cursor:pointer;margin-top:6px;}
+#rb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:8000;justify-content:center;align-items:center;}
+#rbc{background:#0f2310;border:2px solid #2d5a2d;border-radius:12px;padding:20px;max-width:480px;width:92%;color:#fff;max-height:80vh;overflow-y:auto;}
+#rbc h3{margin-bottom:12px;font-size:18px;}
+.rrow{font-size:13px;padding:6px 0;border-bottom:1px solid #1e3a1e;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.hint{color:#f7d060;font-size:11px;position:absolute;top:6px;left:0;right:0;text-align:center;pointer-events:none;}
+</style>
+</head>
+<body>
+<div id="hud">
+  <span class="stat">🌙 Lune <b id="hmoon">1</b></span>
+  <div id="moon-wrap"><div id="moon-fill"></div></div>
+  <span class="stat">🪙 <b id="hgold">5</b></span>
+  <span class="stat" id="hfood-wrap">🍖 <b id="hfood">0</b>/<b id="hpop">0</b></span>
+  <button onclick="showRB()" style="background:#1a4a1a;color:#8f8;border:1px solid #4a8a4a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">📖 Recettes</button>
+  <span style="color:#888;font-size:11px;">Clic-droit = vendre 1🪙</span>
+</div>
+<div id="table"></div>
+<div id="shop">
+  <button class="pbtn" id="b-starter" onclick="buyPack('starter')">📦 Paquet de base — 3🪙</button>
+  <button class="pbtn" id="b-forest"  onclick="buyPack('forest')">🌲 Paquet Forêt — 5🪙</button>
+  <button class="pbtn" id="b-adv"     onclick="buyPack('adv')">⚔️ Paquet Avancé — 8🪙</button>
+</div>
+<div id="log"></div>
+<div id="overlay">
+  <h2>☠️ Famine !</h2>
+  <p>Tes villageois sont morts de faim.</p>
+  <p id="fscore"></p>
+  <button onclick="restart()">Recommencer</button>
+</div>
+<div id="rb" onclick="closeRB()">
+  <div id="rbc" onclick="event.stopPropagation()">
+    <h3>📖 Recettes</h3>
+    <div id="rlist"></div>
+    <button onclick="closeRB()" style="margin-top:14px;background:#c0392b;color:#fff;border:none;padding:7px 18px;border-radius:6px;cursor:pointer;">Fermer</button>
+  </div>
+</div>
+
+<script>
+// ── DEFINITIONS ─────────────────────────────────────────────────────────────
+const CD = {
+  berry_bush:    {n:'Buisson',    e:'🫐', bg:'#bbf7d0',c:'#14532d',node:1},
+  tree:          {n:'Arbre',      e:'🌳', bg:'#dcfce7',c:'#14532d',node:1},
+  rock:          {n:'Rocher',     e:'🪨', bg:'#e2e8f0',c:'#334155',node:1},
+  berry:         {n:'Baie',       e:'🫐', bg:'#f3e8ff',c:'#6b21a8',food:1},
+  wood:          {n:'Bois',       e:'🪵', bg:'#fef3c7',c:'#92400e'},
+  stone:         {n:'Pierre',     e:'🪨', bg:'#f1f5f9',c:'#475569'},
+  flint:         {n:'Silex',      e:'🔷', bg:'#dbeafe',c:'#1e40af'},
+  gold:          {n:'Or',         e:'🪙', bg:'#fef9c3',c:'#a16207'},
+  villager:      {n:'Villageois', e:'🧑', bg:'#dbeafe',c:'#1e3a8a'},
+  baby:          {n:'Bébé',       e:'👶', bg:'#fce7f3',c:'#9d174d'},
+  plank:         {n:'Planche',    e:'🟫', bg:'#fef3c7',c:'#78350f'},
+  brick:         {n:'Brique',     e:'🧱', bg:'#fee2e2',c:'#991b1b'},
+  campfire:      {n:'Feu de camp',e:'🔥', bg:'#fff7ed',c:'#c2410c',node:1},
+  house:         {n:'Maison',     e:'🏠', bg:'#d1fae5',c:'#065f46',node:1},
+  cooked_berry:  {n:'Baie cuite', e:'🍇', bg:'#f5d0fe',c:'#86198f',food:3},
+  stew:          {n:'Ragoût',     e:'🍲', bg:'#fef3c7',c:'#92400e',food:5},
+  apple:         {n:'Pomme',      e:'🍎', bg:'#fee2e2',c:'#b91c1c',food:2},
+  sword:         {n:'Épée',       e:'⚔️', bg:'#e2e8f0',c:'#1e293b'},
+  farm:          {n:'Ferme',      e:'🌾', bg:'#fef9c3',c:'#854d0e',node:1},
+};
+
+const RECIPES = [
+  // Production (repeating)
+  {i:['berry_bush','villager'],     o:['berry'],    keep:['berry_bush','villager'], t:4,  rep:1, d:'Buisson + Villageois → Baie'},
+  {i:['tree','villager'],           o:['wood'],     keep:['tree','villager'],       t:5,  rep:1, d:'Arbre + Villageois → Bois'},
+  {i:['rock','villager'],           o:['stone'],    keep:['rock','villager'],       t:6,  rep:1, d:'Rocher + Villageois → Pierre'},
+  {i:['farm','villager'],           o:['apple'],    keep:['farm','villager'],       t:7,  rep:1, d:'Ferme + Villageois → Pomme'},
+  // Crafting
+  {i:['flint','wood'],              o:['campfire'],           keep:[],           t:3,  rep:0, d:'Silex + Bois → Feu de camp'},
+  {i:['berry','campfire'],          o:['cooked_berry'],       keep:['campfire'], t:2,  rep:0, d:'Feu + Baie → Baie cuite'},
+  {i:['apple','campfire'],          o:['stew'],               keep:['campfire'], t:3,  rep:0, d:'Feu + Pomme → Ragoût'},
+  {i:['berry','berry','campfire'],  o:['stew'],               keep:['campfire'], t:4,  rep:0, d:'Feu + 2 Baies → Ragoût'},
+  {i:['villager','wood','wood','wood'],           o:['plank'],  keep:[], t:6,  rep:0, d:'Villageois + 3 Bois → Planche'},
+  {i:['stone','stone','stone','villager'],        o:['brick'],  keep:[], t:6,  rep:0, d:'Villageois + 3 Pierres → Brique'},
+  {i:['brick','brick','plank','plank','villager'],o:['house'],  keep:[], t:10, rep:0, d:'Villageois + 2 Planches + 2 Briques → Maison'},
+  {i:['brick','plank','plank','villager'],        o:['farm'],   keep:[], t:8,  rep:0, d:'Villageois + 2 Planches + Brique → Ferme'},
+  {i:['flint','plank','villager'],               o:['sword'],  keep:[], t:5,  rep:0, d:'Villageois + Planche + Silex → Épée'},
+  {i:['house','villager','villager'], o:['baby'], keep:['house','villager','villager'], t:15, rep:0, d:'Maison + 2 Villageois → Bébé'},
+  {i:['baby'],                        o:['villager'],          keep:[], t:10, rep:0, d:'Bébé → Villageois'},
+];
+
+const PACKS = {
+  starter:{n:'Paquet de base', cost:3, cnt:3, pool:[
+    {t:'berry_bush',w:20},{t:'tree',w:15},{t:'rock',w:12},
+    {t:'berry',w:35},{t:'wood',w:30},{t:'stone',w:25},
+    {t:'flint',w:8},{t:'gold',w:12},{t:'villager',w:6},{t:'apple',w:18},
+  ]},
+  forest:{n:'Paquet Forêt', cost:5, cnt:4, pool:[
+    {t:'tree',w:40},{t:'wood',w:45},{t:'flint',w:25},
+    {t:'berry_bush',w:30},{t:'villager',w:14},{t:'stone',w:18},{t:'apple',w:22},
+  ]},
+  adv:{n:'Paquet Avancé', cost:8, cnt:5, pool:[
+    {t:'plank',w:30},{t:'brick',w:25},{t:'flint',w:20},
+    {t:'villager',w:18},{t:'gold',w:20},{t:'stone',w:20},{t:'apple',w:15},{t:'sword',w:8},
+  ]},
+};
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+const CW=82, CH=104, SO=24; // card size, stack offset
+let G={};
+
+function initG(){
+  G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false};
+  document.getElementById('table').innerHTML='';
+  document.getElementById('log').innerHTML='';
+  spawn('berry_bush',70,70); spawn('tree',200,70); spawn('villager',330,70);
+  spawn('berry',460,70);     spawn('berry',460,180); spawn('flint',330,180);
+  updateHUD(); log('🌅 Empile les cartes pour crafter !');
+  requestAnimationFrame(loop);
+}
+
+// ── CARDS ────────────────────────────────────────────────────────────────────
+function spawn(type,x,y){
+  const id=G.nid++; const d=CD[type];
+  G.cards[id]={id,type,x,y,sid:null};
+  const el=document.createElement('div');
+  el.className='card'; el.id='c'+id;
+  el.style.cssText=`left:${x}px;top:${y}px;background:${d.bg};color:${d.c};z-index:10;`;
+  el.innerHTML=`<div class="card-emoji">${d.e}</div><div class="card-name">${d.n}</div><div class="card-bar"><div class="card-bar-fill"></div></div>`;
+  el.addEventListener('mousedown',e=>{e.preventDefault();startDrag(e,id);});
+  el.addEventListener('contextmenu',e=>{e.preventDefault();sellCard(id);});
+  document.getElementById('table').appendChild(el);
+  return id;
+}
+function cel(id){return document.getElementById('c'+id);}
+function delCard(id){const e=cel(id);if(e)e.remove();delete G.cards[id];}
+
+// ── STACKS ───────────────────────────────────────────────────────────────────
+function mkStack(ids){
+  const sid=G.nid++;
+  const root=G.cards[ids[0]];
+  G.stacks[sid]={id:sid,ids:[...ids],rx:root.x,ry:root.y,recipe:null,prog:0};
+  ids.forEach(id=>{G.cards[id].sid=sid;});
+  updateSV(sid); checkRecipe(sid); return sid;
+}
+function dissolve(sid){
+  const s=G.stacks[sid]; if(!s)return;
+  s.ids.forEach(id=>{if(G.cards[id])G.cards[id].sid=null;});
+  delete G.stacks[sid];
+}
+function addToStack(sid,cid){
+  rmFromStack(cid);
+  const s=G.stacks[sid]; s.ids.push(cid); G.cards[cid].sid=sid;
+  s.recipe=null; s.prog=0; updateSV(sid); checkRecipe(sid);
+}
+function rmFromStack(cid){
+  const c=G.cards[cid]; if(!c||!c.sid)return;
+  const s=G.stacks[c.sid]; if(!s){c.sid=null;return;}
+  s.ids=s.ids.filter(i=>i!==cid); c.sid=null; s.recipe=null; s.prog=0;
+  if(s.ids.length===0){dissolve(s.id);}
+  else if(s.ids.length===1){
+    const last=s.ids[0]; G.cards[last].x=s.rx; G.cards[last].y=s.ry;
+    G.cards[last].sid=null; dissolve(s.id); updateCV(last);
+  } else {updateSV(s.id); checkRecipe(s.id);}
+}
+function updateSV(sid){
+  const s=G.stacks[sid]; if(!s)return;
+  s.ids.forEach((cid,i)=>{
+    const el=cel(cid); if(!el)return;
+    const x=s.rx, y=s.ry+i*SO;
+    el.style.left=x+'px'; el.style.top=y+'px'; el.style.zIndex=10+i;
+    G.cards[cid].x=x; G.cards[cid].y=y;
+    const bar=el.querySelector('.card-bar');
+    bar.style.display=(i===0&&s.recipe)?'block':'none';
+  });
+}
+function updateCV(id){
+  const c=G.cards[id],el=cel(id); if(!el||!c)return;
+  el.style.left=c.x+'px'; el.style.top=c.y+'px';
+  el.querySelector('.card-bar').style.display='none';
+}
+
+// ── RECIPES ──────────────────────────────────────────────────────────────────
+function sortedTypes(ids){return ids.map(i=>G.cards[i].type).sort();}
+function arrEq(a,b){return a.length===b.length&&a.every((v,i)=>v===b[i]);}
+
+function checkRecipe(sid){
+  const s=G.stacks[sid]; if(!s)return;
+  const types=sortedTypes(s.ids);
+  for(const r of RECIPES){
+    if(arrEq(types,[...r.i].sort())){s.recipe=r;s.prog=0;updateSV(sid);return;}
+  }
+  s.recipe=null; updateSV(sid);
+}
+
+function execRecipe(sid){
+  const s=G.stacks[sid]; if(!s||!s.recipe)return;
+  const r=s.recipe, rx=s.rx, ry=s.ry;
+  // Determine kept vs consumed
+  const keepQ=[...r.keep];
+  const kept=[], gone=[];
+  s.ids.forEach(cid=>{
+    const t=G.cards[cid].type, ki=keepQ.indexOf(t);
+    if(ki!==-1){kept.push(cid);keepQ.splice(ki,1);}
+    else gone.push(cid);
+  });
+  // Dissolve and clean
+  kept.forEach(cid=>{G.cards[cid].sid=null;});
+  dissolve(sid);
+  gone.forEach(cid=>delCard(cid));
+  // Spawn output below stack
+  const stackH=kept.length*SO+CH;
+  r.o.forEach((type,i)=>{
+    const nx=rx+(i%3)*(CW+8);
+    const ny=ry+stackH+16+Math.floor(i/3)*(CH+8);
+    spawn(type,nx,ny);
+  });
+  // Re-form kept cards
+  if(kept.length>0){
+    kept.forEach((cid,i)=>{G.cards[cid].x=rx;G.cards[cid].y=ry+i*SO;updateCV(cid);});
+    if(kept.length>1)mkStack(kept);
+    // Re-check recipe for kept stack (for repeating)
+    if(r.rep&&kept.length>1){
+      const ns=G.cards[kept[0]].sid; if(ns)checkRecipe(ns);
+    }
+  }
+  const names=r.o.map(t=>CD[t].e+CD[t].n).join(', ');
+  log('✨ '+names+' créé !');
+  updateHUD();
+}
+
+// ── DRAG ─────────────────────────────────────────────────────────────────────
+function startDrag(e,id){
+  if(G.over)return;
+  const c=G.cards[id], el=cel(id); if(!el)return;
+  const tr=document.getElementById('table').getBoundingClientRect();
+  const er=el.getBoundingClientRect();
+  if(c.sid)rmFromStack(id);
+  G.drag={id,ox:e.clientX-er.left,oy:e.clientY-er.top,tl:tr.left,tt:tr.top};
+  el.classList.add('dragging'); el.style.zIndex=9999;
+}
+document.addEventListener('mousemove',e=>{
+  if(!G.drag)return;
+  const c=G.cards[G.drag.id],el=cel(G.drag.id); if(!c||!el)return;
+  c.x=e.clientX-G.drag.tl-G.drag.ox;
+  c.y=e.clientY-G.drag.tt-G.drag.oy;
+  el.style.left=c.x+'px'; el.style.top=c.y+'px';
+});
+document.addEventListener('mouseup',()=>{
+  if(!G.drag)return;
+  const id=G.drag.id; G.drag=null;
+  const el=cel(id); if(el){el.classList.remove('dragging');el.style.zIndex=10;}
+  const tgt=findTarget(id);
+  if(tgt){
+    if(tgt.sid)addToStack(tgt.sid,id);
+    else mkStack([tgt.id,id]);
+  }
+  updateHUD();
+});
+function findTarget(dragId){
+  const dc=G.cards[dragId];
+  for(const [idStr,c] of Object.entries(G.cards)){
+    const id=parseInt(idStr); if(id===dragId)continue;
+    const ox=Math.min(dc.x+CW,c.x+CW)-Math.max(dc.x,c.x);
+    const oy=Math.min(dc.y+CH,c.y+CH)-Math.max(dc.y,c.y);
+    if(ox>22&&oy>22){
+      if(c.sid){const s=G.stacks[c.sid];return{id:s.ids[0],sid:c.sid};}
+      return{id,sid:null};
+    }
+  }
+  return null;
+}
+
+// ── SELL ─────────────────────────────────────────────────────────────────────
+function sellCard(id){
+  if(G.over||!G.cards[id])return;
+  const t=G.cards[id].type; if(CD[t].node)return; // can't sell node cards
+  if(G.cards[id].sid)rmFromStack(id);
+  delCard(id); G.gold+=1; log('💰 +1🪙 (vente)'); updateHUD();
+}
+
+// ── GAME LOOP ────────────────────────────────────────────────────────────────
+function loop(ts){
+  if(G.over)return;
+  if(!G.ts)G.ts=ts;
+  const dt=(ts-G.ts)/1000; G.ts=ts;
+  // Moon progress
+  G.moonProg+=dt/G.moonDur;
+  if(G.moonProg>=1){G.moonProg=0;G.moon++;endMoon();}
+  document.getElementById('moon-fill').style.width=(G.moonProg*100)+'%';
+  // Recipe timers
+  for(const [sidStr,s] of Object.entries(G.stacks)){
+    if(!s.recipe)continue;
+    s.prog+=dt/s.recipe.t;
+    const fill=cel(s.ids[0])?.querySelector('.card-bar-fill');
+    if(fill)fill.style.width=(Math.min(s.prog,1)*100)+'%';
+    if(s.prog>=1){s.prog=0;execRecipe(parseInt(sidStr));}
+  }
+  requestAnimationFrame(loop);
+}
+
+// ── MOON / FOOD ───────────────────────────────────────────────────────────────
+function endMoon(){
+  const pop=countT('villager')+countT('baby');
+  if(pop===0){log('🌙 Lune '+G.moon);updateHUD();return;}
+  // Collect food cards sorted by value desc (use big ones first)
+  const fCards=Object.values(G.cards)
+    .filter(c=>CD[c.type]&&CD[c.type].food)
+    .sort((a,b)=>(CD[b.type].food||0)-(CD[a.type].food||0));
+  const total=fCards.reduce((s,c)=>s+(CD[c.type].food||0),0);
+  if(total<pop){G.over=true;showOver();return;}
+  let need=pop;
+  for(const fc of fCards){
+    if(need<=0)break;
+    const fv=CD[fc.type].food;
+    if(fc.sid)rmFromStack(fc.id);
+    delCard(fc.id); need-=fv;
+  }
+  log('🌙 Lune '+G.moon+' — '+pop+' villageois nourris !');
+  updateHUD();
+}
+function countT(t){return Object.values(G.cards).filter(c=>c.type===t).length;}
+
+// ── PACKS ────────────────────────────────────────────────────────────────────
+function buyPack(key){
+  const p=PACKS[key]; if(!p||G.gold<p.cost)return;
+  G.gold-=p.cost;
+  const tbl=document.getElementById('table').getBoundingClientRect();
+  const cx=tbl.width/2,cy=tbl.height/2;
+  for(let i=0;i<p.cnt;i++){
+    const type=wRand(p.pool);
+    const x=cx+(Math.random()-.5)*220-CW/2;
+    const y=cy+(Math.random()-.5)*160-CH/2;
+    spawn(type,Math.max(4,x),Math.max(4,y));
+  }
+  log('📦 Ouvert : '+p.n); updateHUD();
+}
+function wRand(pool){
+  const tot=pool.reduce((s,e)=>s+e.w,0);
+  let r=Math.random()*tot;
+  for(const e of pool){r-=e.w;if(r<=0)return e.t;}
+  return pool[pool.length-1].t;
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function updateHUD(){
+  const pop=countT('villager')+countT('baby');
+  const food=Object.values(G.cards)
+    .filter(c=>CD[c.type]?.food).reduce((s,c)=>s+(CD[c.type].food||0),0);
+  document.getElementById('hmoon').textContent=G.moon;
+  document.getElementById('hgold').textContent=G.gold;
+  document.getElementById('hfood').textContent=food;
+  document.getElementById('hpop').textContent=pop;
+  document.getElementById('hfood-wrap').style.color=food>=pop?'#86efac':'#fca5a5';
+  Object.keys(PACKS).forEach(k=>{
+    const b=document.getElementById('b-'+k);
+    if(b)b.disabled=G.gold<PACKS[k].cost;
+  });
+}
+
+// ── LOG ───────────────────────────────────────────────────────────────────────
+function log(msg){
+  const d=document.getElementById('log');
+  const el=document.createElement('div');
+  el.className='litem'; el.textContent=msg;
+  d.appendChild(el); setTimeout(()=>el.remove(),5000);
+}
+
+// ── GAME OVER ─────────────────────────────────────────────────────────────────
+function showOver(){
+  const o=document.getElementById('overlay');
+  o.style.display='flex';
+  document.getElementById('fscore').textContent='Tu as survécu '+G.moon+' lunes.';
+}
+function restart(){
+  document.getElementById('overlay').style.display='none'; initG();
+}
+
+// ── RECIPE BOOK ───────────────────────────────────────────────────────────────
+function showRB(){
+  document.getElementById('rlist').innerHTML=RECIPES.map(r=>`
+    <div class="rrow">
+      <span>${r.i.map(t=>CD[t]?.e+'&nbsp;'+CD[t]?.n).join(' + ')}</span>
+      <span>→</span>
+      <span>${r.o.map(t=>CD[t]?.e+'&nbsp;'+CD[t]?.n).join(', ')}</span>
+      <span style="color:#888;font-size:11px;">${r.t}s${r.rep?' 🔄':''}</span>
+    </div>`).join('');
+  document.getElementById('rb').style.display='flex';
+}
+function closeRB(){document.getElementById('rb').style.display='none';}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+initG();
+</script>
+</body>
+</html>
