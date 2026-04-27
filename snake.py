@@ -4,7 +4,6 @@ import snakeToolBox
 
 pygame.init()
 
-# --- Constantes ---
 Xmax = 30
 Ymax = 21
 RAYON = 10
@@ -26,27 +25,22 @@ COUL_NOURRITURE = ROSE
 
 IPS = 10
 
-# --- Création de la fenêtre ---
 ipsHorloge = pygame.time.Clock()
 surface_affichage = pygame.display.set_mode((LARGEUR, HAUTEUR))
 pygame.display.set_caption('Snake')
 
-# --- Boucle qui permet de rejouer ---
 jouer = True
 while jouer:
 
-    # Initialisation du serpent et des variables du jeu
     snake = {'tête': [0, 0], 'corps': [[0, 1]], 'queue': [0, 2]}
     mvt = ''
     score = 0
     boule = snakeToolBox.creerBoule(snake, Xmax, Ymax)
 
-    # --- Boucle principale du jeu ---
     perdu = False
     while not perdu:
         surface_affichage.fill(COULEUR_FOND)
 
-        # Gestion des événements
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
@@ -61,27 +55,22 @@ while jouer:
                 elif event.key == K_DOWN:
                     mvt = snakeToolBox.filtrer_mouvement(mvt, 'bas')
 
-        # Déplacement du serpent ou avalement de la boule de nourriture
         snake, bouleExiste, perdu = snakeToolBox.avaleBoule(
             snake, mvt, boule[0], boule[1], Xmax, Ymax
         )
 
-        # Si la boule a été avalée, on crée une nouvelle boule et on augmente le score
         if not bouleExiste:
             score += 1
             pygame.display.set_caption('Snake - Score : ' + str(score))
             boule = snakeToolBox.creerBoule(snake, Xmax, Ymax)
 
-        # Dessin du serpent et de la boule de nourriture
         snakeToolBox.dessinerSnake(snake, RAYON, surface_affichage,
                                    COUL_TETE, COUL_CORPS, COUL_QUEUE)
         snakeToolBox.dessinerBoule(boule, RAYON, surface_affichage, COUL_NOURRITURE)
 
-        # Mise à jour de l'affichage
         pygame.display.update()
         ipsHorloge.tick(IPS)
 
-    # --- Écran de résultat ---
     surface_affichage.fill(NOIR)
     police = pygame.font.SysFont(None, 64)
 
@@ -98,7 +87,6 @@ while jouer:
 
     pygame.display.update()
 
-    # On attend le choix du joueur
     choix_fait = False
     while not choix_fait:
         for event in pygame.event.get():
