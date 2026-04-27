@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Snake - NSI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        h1 { font-size: 32px; margin-bottom: 12px; letter-spacing: 4px; }
+        #score { font-size: 22px; margin-bottom: 10px; }
+        canvas { border: 2px solid white; display: block; }
+        #message {
+            font-size: 20px;
+            margin-top: 14px;
+            text-align: center;
+            min-height: 60px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 30px;
+            font-size: 18px;
+            background: #222;
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        button:hover { background: #444; }
+    </style>
+</head>
+<body>
+    <h1>SNAKE</h1>
+    <div id="score">Score : 0</div>
+    <canvas id="canvas" width="600" height="420"></canvas>
+    <div id="message">Appuie sur une flèche pour commencer</div>
+
+    <script>
+        const XMAX   = 30;
+        const YMAX   = 21;
+        const RAYON  = 10;
+        const CELLULE = 2 * RAYON;  // 20px par case
+        const IPS    = 10;          // images par seconde
+
+        const COUL_FOND       = '#111111';
+        const COUL_TETE       = '#ff0000';
+        const COUL_CORPS      = '#00c800';
+        const COUL_QUEUE      = '#0000ff';
+        const COUL_NOURRITURE = '#ff00ff';
+
+        const canvas  = document.getElementById('canvas');
+        const ctx     = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const msgEl   = document.getElementById('message');
+
+        let snake, mvt, score, boule, perdu, boucleJeu;
+
+        // --- Fonctions équivalentes à snakeToolBox ---
+
+        function creerBoule() {
+            const occupees = [snake.tete, ...snake.corps, snake.queue];
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * XMAX);
+                y = Math.floor(Math.random() * YMAX);
+            } while (occupees.some(p => p[0] === x && p[1] === y));
+            return [x, y];
+        }
+
+        function filtrerMouvement(ancienMvt, nouveauMvt) {
+            const opposes = { haut: 'bas', bas: 'haut', gauche: 'droite', droite: 'gauche' };
+            if (opposes[ancienMvt] === nouveauMvt) return ancienMvt;
+            return nouveauMvt;
+        }
+
+        function avaleBoule() {
+            if (mvt === '') return;
+
+            const tete  = snake.tete.slice();
+            const corps = snake.corps.map(b => b.slice());
+            const queue = snake.queue.slice();
+
+            let newTete;
+            if      (mvt === 'droite') newTete = [tete[0] + 1, tete[1]];
+            else if (mvt === 'gauche') newTete = [tete[0] - 1, tete[1]];
+            else if (mvt === 'haut')   newTete = [tete[0], tete[1] - 1];
+            else if (mvt === 'bas')    newTete = [tete[0], tete[1] + 1];
+
+            // Le serpent avale la boule ?
+            if (newTete[0] === boule[0] && newTete[1] === boule[1]) {
+                snake = { tete: newTete, corps: [tete, ...corps], queue: queue };
+                score++;
+                scoreEl.textContent = 'Score : ' + score;
+                boule = creerBoule();
+                return;
+            }
+
+            // Vérification si perdu
+            if (newTete[0] < 0 || newTete[0] >= XMAX || newTete[1] < 0 || newTete[1] >= YMAX) {
+                perdu = true; return;
+            }
+            if (corps.some(b => b[0] === newTete[0] && b[1] === newTete[1])) {
+                perdu = true; return;
+            }
+            if (queue[0] === newTete[0] && queue[1] === newTete[1]) {
+                perdu = true; return;
+            }
+
+            // Déplacement normal
+            const newQueue = corps[corps.length - 1].slice();
+            const newCorps = [tete, ...corps.slice(0, -1)];
+            snake = { tete: newTete, corps: newCorps, queue: newQueue };
+        }
+
+        function dessinerBoule(pos, couleur) {
+            const cx = pos[0] * CELLULE + RAYON;
+            const cy = pos[1] * CELLULE + RAYON;
+            ctx.beginPath();
+            ctx.arc(cx, cy, RAYON, 0, Math.PI * 2);
+            ctx.fillStyle = couleur;
+            ctx.fill();
+        }
+
+        function dessinerSnake() {
+            snake.corps.forEach(b => dessinerBoule(b, COUL_CORPS));
+            dessinerBoule(snake.queue, COUL_QUEUE);
+            dessinerBoule(snake.tete, COUL_TETE);
+        }
+
+        function dessiner() {
+            ctx.fillStyle = COUL_FOND;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            dessinerBoule(boule, COUL_NOURRITURE);
+            dessinerSnake();
+        }
+
+        // --- Boucle principale ---
+
+        function boucle() {
+            avaleBoule();
+            dessiner();
+            if (perdu) {
+                clearInterval(boucleJeu);
+                msgEl.innerHTML = 'PERDU !&nbsp;&nbsp;Score final : <b>' + score + '</b><br>'
+                    + '<button onclick="rejouer()">Rejouer</button>';
+            }
+        }
+
+        function rejouer() {
+            clearInterval(boucleJeu);
+            snake  = { tete: [0, 0], corps: [[0, 1]], queue: [0, 2] };
+            mvt    = '';
+            score  = 0;
+            perdu  = false;
+            boule  = creerBoule();
+            scoreEl.textContent = 'Score : 0';
+            msgEl.textContent   = 'Appuie sur une flèche pour commencer';
+            dessiner();
+            boucleJeu = setInterval(boucle, 1000 / IPS);
+        }
+
+        // --- Contrôles clavier ---
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight') { mvt = filtrerMouvement(mvt, 'droite'); e.preventDefault(); }
+            else if (e.key === 'ArrowLeft')  { mvt = filtrerMouvement(mvt, 'gauche'); e.preventDefault(); }
+            else if (e.key === 'ArrowUp')    { mvt = filtrerMouvement(mvt, 'haut');   e.preventDefault(); }
+            else if (e.key === 'ArrowDown')  { mvt = filtrerMouvement(mvt, 'bas');    e.preventDefault(); }
+        });
+
+        // --- Démarrage ---
+        rejouer();
+    </script>
+</body>
+</html>
