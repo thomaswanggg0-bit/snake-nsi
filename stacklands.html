@@ -6,14 +6,15 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;user-select:none;}
 body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
-#hud{background:#0f2310;border-bottom:2px solid #2d5a2d;padding:8px 14px;display:flex;align-items:center;gap:16px;flex-shrink:0;z-index:100;}
-#moon-wrap{flex:1;height:18px;background:#0a1a0a;border-radius:9px;overflow:hidden;border:1px solid #2d5a2d;}
+#hud{background:#0f2310;border-bottom:2px solid #2d5a2d;padding:8px 14px;display:flex;align-items:center;gap:14px;flex-shrink:0;z-index:100;flex-wrap:wrap;}
+#moon-wrap{flex:1;min-width:80px;height:18px;background:#0a1a0a;border-radius:9px;overflow:hidden;border:1px solid #2d5a2d;}
 #moon-fill{height:100%;width:0%;background:linear-gradient(90deg,#f7d060,#e94560);border-radius:9px;}
-.stat{color:#ccc;font-size:13px;white-space:nowrap;}
-.stat b{color:#fff;}
+.stat{color:#ccc;font-size:13px;white-space:nowrap;}.stat b{color:#fff;}
 #table{flex:1;position:relative;overflow:hidden;background:#1e4a1e;background-image:radial-gradient(circle at 1px 1px,#265226 1px,transparent 0);background-size:28px 28px;cursor:default;}
 .card{position:absolute;width:82px;height:104px;border-radius:9px;cursor:grab;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(0,0,0,0.25);box-shadow:0 3px 8px rgba(0,0,0,0.4);transition:box-shadow .1s;}
 .card:hover{box-shadow:0 0 0 2px #f7d060,0 3px 8px rgba(0,0,0,0.4);}
+.card.monster{border-color:rgba(239,68,68,0.6);}
+.card.monster:hover{box-shadow:0 0 0 2px #ef4444,0 3px 8px rgba(0,0,0,0.6);}
 .card.dragging{box-shadow:0 10px 24px rgba(0,0,0,0.7);z-index:9999!important;cursor:grabbing;}
 .card-emoji{font-size:30px;margin-bottom:3px;pointer-events:none;}
 .card-name{font-size:10px;font-weight:700;text-align:center;padding:0 4px;line-height:1.2;pointer-events:none;}
@@ -21,44 +22,62 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 .card-bar-fill{height:100%;background:#4ade80;width:0%;}
 #shop{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:7px;z-index:100;}
 .pbtn{background:#c0392b;color:#fff;border:none;border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 8px rgba(0,0,0,0.4);}
-.pbtn:hover{background:#a93226;}
-.pbtn:disabled{background:#555;cursor:not-allowed;}
+.pbtn:hover{background:#a93226;}.pbtn:disabled{background:#555;cursor:not-allowed;}
 #log{position:absolute;bottom:12px;left:12px;z-index:100;max-width:240px;}
 .litem{background:rgba(0,0,0,.75);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;margin-bottom:4px;animation:fi .3s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9000;justify-content:center;align-items:center;flex-direction:column;color:#fff;gap:16px;}
-#overlay h2{font-size:44px;}
-#overlay p{font-size:18px;color:#ccc;}
-#overlay button{background:#c0392b;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:16px;cursor:pointer;margin-top:6px;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;justify-content:center;align-items:center;flex-direction:column;color:#fff;gap:12px;text-align:center;padding:20px;}
+.overlay h2{font-size:42px;}.overlay p{font-size:16px;color:#ccc;}
+.overlay .btn-row{display:flex;gap:12px;margin-top:8px;}
+.obtn{background:#c0392b;color:#fff;border:none;padding:11px 28px;border-radius:8px;font-size:15px;cursor:pointer;}
+.obtn:hover{background:#a93226;}.obtn.green{background:#16a34a;}.obtn.green:hover{background:#15803d;}
 #rb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:8000;justify-content:center;align-items:center;}
-#rbc{background:#0f2310;border:2px solid #2d5a2d;border-radius:12px;padding:20px;max-width:480px;width:92%;color:#fff;max-height:80vh;overflow-y:auto;}
+#rbc{background:#0f2310;border:2px solid #2d5a2d;border-radius:12px;padding:20px;max-width:500px;width:92%;color:#fff;max-height:80vh;overflow-y:auto;}
 #rbc h3{margin-bottom:12px;font-size:18px;}
 .rrow{font-size:13px;padding:6px 0;border-bottom:1px solid #1e3a1e;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.hint{color:#f7d060;font-size:11px;position:absolute;top:6px;left:0;right:0;text-align:center;pointer-events:none;}
+#wave-alert{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(160,0,0,0.93);color:#fff;font-size:20px;font-weight:700;padding:14px 30px;border-radius:12px;z-index:500;pointer-events:none;text-align:center;border:2px solid #ef4444;}
+#obj{font-size:11px;color:#f7d060;white-space:nowrap;}
 </style>
 </head>
 <body>
 <div id="hud">
-  <span class="stat">🌙 Lune <b id="hmoon">1</b></span>
+  <span class="stat">📅 Jour <b id="hday">1</b>/25</span>
   <div id="moon-wrap"><div id="moon-fill"></div></div>
   <span class="stat">🪙 <b id="hgold">5</b></span>
   <span class="stat" id="hfood-wrap">🍖 <b id="hfood">0</b>/<b id="hpop">0</b></span>
+  <span id="obj"></span>
   <button onclick="showRB()" style="background:#1a4a1a;color:#8f8;border:1px solid #4a8a4a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">📖 Recettes</button>
-  <span style="color:#888;font-size:11px;">Clic-droit = vendre 1🪙</span>
+  <span style="color:#666;font-size:11px;">Clic-droit=vendre | Échap=Pause</span>
 </div>
-<div id="table"></div>
+<div id="table"><div id="wave-alert"></div></div>
 <div id="shop">
   <button class="pbtn" id="b-starter" onclick="buyPack('starter')">📦 Paquet de base — 3🪙</button>
   <button class="pbtn" id="b-forest"  onclick="buyPack('forest')">🌲 Paquet Forêt — 5🪙</button>
-  <button class="pbtn" id="b-adv"     onclick="buyPack('adv')">⚔️ Paquet Avancé — 8🪙</button>
+  <button class="pbtn" id="b-adv"     onclick="buyPack('adv')">🏗️ Paquet Avancé — 8🪙</button>
+  <button class="pbtn" id="b-combat"  onclick="buyPack('combat')" style="display:none;">⚔️ Paquet Combat — 6🪙</button>
 </div>
 <div id="log"></div>
-<div id="overlay">
-  <h2>☠️ Famine !</h2>
-  <p>Tes villageois sont morts de faim.</p>
-  <p id="fscore"></p>
-  <button onclick="restart()">Recommencer</button>
+
+<div class="overlay" id="overlay">
+  <h2 id="over-title">☠️ Défaite !</h2>
+  <p id="over-msg"></p><p id="fscore"></p>
+  <div class="btn-row"><button class="obtn" onclick="restart()">🔄 Recommencer</button></div>
 </div>
+<div class="overlay" id="victory">
+  <h2>🏆 Victoire !</h2>
+  <p>Tu as survécu 25 jours et repoussé toutes les vagues !</p>
+  <p id="vscore"></p>
+  <div class="btn-row"><button class="obtn green" onclick="restart()">🔄 Rejouer</button></div>
+</div>
+<div class="overlay" id="pause">
+  <h2>⏸ Pause</h2>
+  <p id="pause-info"></p>
+  <div class="btn-row">
+    <button class="obtn green" onclick="togglePause()">▶ Reprendre</button>
+    <button class="obtn" onclick="restart()">🔄 Recommencer</button>
+  </div>
+</div>
+
 <div id="rb" onclick="closeRB()">
   <div id="rbc" onclick="event.stopPropagation()">
     <h3>📖 Recettes</h3>
@@ -68,47 +87,52 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 </div>
 
 <script>
-// ── DEFINITIONS ─────────────────────────────────────────────────────────────
 const CD = {
-  berry_bush:    {n:'Buisson',    e:'🫐', bg:'#bbf7d0',c:'#14532d',node:1},
-  tree:          {n:'Arbre',      e:'🌳', bg:'#dcfce7',c:'#14532d',node:1},
-  rock:          {n:'Rocher',     e:'🪨', bg:'#e2e8f0',c:'#334155',node:1},
-  berry:         {n:'Baie',       e:'🫐', bg:'#f3e8ff',c:'#6b21a8',food:1},
-  wood:          {n:'Bois',       e:'🪵', bg:'#fef3c7',c:'#92400e'},
-  stone:         {n:'Pierre',     e:'🪨', bg:'#f1f5f9',c:'#475569'},
-  flint:         {n:'Silex',      e:'🔷', bg:'#dbeafe',c:'#1e40af'},
-  gold:          {n:'Or',         e:'🪙', bg:'#fef9c3',c:'#a16207'},
-  villager:      {n:'Villageois', e:'🧑', bg:'#dbeafe',c:'#1e3a8a'},
-  baby:          {n:'Bébé',       e:'👶', bg:'#fce7f3',c:'#9d174d'},
-  plank:         {n:'Planche',    e:'🟫', bg:'#fef3c7',c:'#78350f'},
-  brick:         {n:'Brique',     e:'🧱', bg:'#fee2e2',c:'#991b1b'},
-  campfire:      {n:'Feu de camp',e:'🔥', bg:'#fff7ed',c:'#c2410c',node:1},
-  house:         {n:'Maison',     e:'🏠', bg:'#d1fae5',c:'#065f46',node:1},
-  cooked_berry:  {n:'Baie cuite', e:'🍇', bg:'#f5d0fe',c:'#86198f',food:3},
-  stew:          {n:'Ragoût',     e:'🍲', bg:'#fef3c7',c:'#92400e',food:5},
-  apple:         {n:'Pomme',      e:'🍎', bg:'#fee2e2',c:'#b91c1c',food:2},
-  sword:         {n:'Épée',       e:'⚔️', bg:'#e2e8f0',c:'#1e293b'},
-  farm:          {n:'Ferme',      e:'🌾', bg:'#fef9c3',c:'#854d0e',node:1},
+  berry_bush:   {n:'Buisson',     e:'🫐', bg:'#bbf7d0',c:'#14532d',node:1},
+  tree:         {n:'Arbre',       e:'🌳', bg:'#dcfce7',c:'#14532d',node:1},
+  rock:         {n:'Rocher',      e:'🪨', bg:'#e2e8f0',c:'#334155',node:1},
+  berry:        {n:'Baie',        e:'🫐', bg:'#f3e8ff',c:'#6b21a8',food:1},
+  wood:         {n:'Bois',        e:'🪵', bg:'#fef3c7',c:'#92400e'},
+  stone:        {n:'Pierre',      e:'🪨', bg:'#f1f5f9',c:'#475569'},
+  flint:        {n:'Silex',       e:'🔷', bg:'#dbeafe',c:'#1e40af'},
+  gold:         {n:'Or',          e:'🪙', bg:'#fef9c3',c:'#a16207'},
+  villager:     {n:'Villageois',  e:'🧑', bg:'#dbeafe',c:'#1e3a8a'},
+  baby:         {n:'Bébé',        e:'👶', bg:'#fce7f3',c:'#9d174d'},
+  plank:        {n:'Planche',     e:'🟫', bg:'#fef3c7',c:'#78350f'},
+  brick:        {n:'Brique',      e:'🧱', bg:'#fee2e2',c:'#991b1b'},
+  campfire:     {n:'Feu de camp', e:'🔥', bg:'#fff7ed',c:'#c2410c',node:1},
+  house:        {n:'Maison',      e:'🏠', bg:'#d1fae5',c:'#065f46',node:1},
+  cooked_berry: {n:'Baie cuite',  e:'🍇', bg:'#f5d0fe',c:'#86198f',food:3},
+  stew:         {n:'Ragoût',      e:'🍲', bg:'#fef3c7',c:'#92400e',food:5},
+  apple:        {n:'Pomme',       e:'🍎', bg:'#fee2e2',c:'#b91c1c',food:2},
+  sword:        {n:'Épée',        e:'⚔️', bg:'#e2e8f0',c:'#1e293b'},
+  farm:         {n:'Ferme',       e:'🌾', bg:'#fef9c3',c:'#854d0e',node:1},
+  bone:         {n:'Os',          e:'🦴', bg:'#f1f5f9',c:'#64748b'},
+  wolf:         {n:'Loup',        e:'🐺', bg:'#374151',c:'#f9fafb',monster:1,aggroMax:15},
+  goblin:       {n:'Gobelin',     e:'👺', bg:'#4c1d95',c:'#f5f3ff',monster:1,aggroMax:12},
+  troll:        {n:'Troll',       e:'👹', bg:'#7f1d1d',c:'#fef2f2',monster:1,aggroMax:10},
 };
 
 const RECIPES = [
-  // Production (repeating)
-  {i:['berry_bush','villager'],     o:['berry'],    keep:['berry_bush','villager'], t:4,  rep:1, d:'Buisson + Villageois → Baie'},
-  {i:['tree','villager'],           o:['wood'],     keep:['tree','villager'],       t:5,  rep:1, d:'Arbre + Villageois → Bois'},
-  {i:['rock','villager'],           o:['stone'],    keep:['rock','villager'],       t:6,  rep:1, d:'Rocher + Villageois → Pierre'},
-  {i:['farm','villager'],           o:['apple'],    keep:['farm','villager'],       t:7,  rep:1, d:'Ferme + Villageois → Pomme'},
-  // Crafting
-  {i:['flint','wood'],              o:['campfire'],           keep:[],           t:3,  rep:0, d:'Silex + Bois → Feu de camp'},
-  {i:['berry','campfire'],          o:['cooked_berry'],       keep:['campfire'], t:2,  rep:0, d:'Feu + Baie → Baie cuite'},
-  {i:['apple','campfire'],          o:['stew'],               keep:['campfire'], t:3,  rep:0, d:'Feu + Pomme → Ragoût'},
-  {i:['berry','berry','campfire'],  o:['stew'],               keep:['campfire'], t:4,  rep:0, d:'Feu + 2 Baies → Ragoût'},
-  {i:['villager','wood','wood','wood'],           o:['plank'],  keep:['villager'], t:6,  rep:0, d:'Villageois + 3 Bois → Planche'},
-  {i:['stone','stone','stone','villager'],        o:['brick'],  keep:['villager'], t:6,  rep:0, d:'Villageois + 3 Pierres → Brique'},
-  {i:['brick','brick','plank','plank','villager'],o:['house'],  keep:[], t:10, rep:0, d:'Villageois + 2 Planches + 2 Briques → Maison'},
-  {i:['brick','plank','plank','villager'],        o:['farm'],   keep:['villager'], t:8,  rep:0, d:'Villageois + 2 Planches + Brique → Ferme'},
-  {i:['flint','plank','villager'],               o:['sword'],  keep:['villager'], t:5,  rep:0, d:'Villageois + Planche + Silex → Épée'},
-  {i:['house','villager','villager'], o:['baby'], keep:['house','villager','villager'], t:15, rep:0, d:'Maison + 2 Villageois → Bébé'},
-  {i:['baby'],                        o:['villager'],          keep:[], t:10, rep:0, d:'Bébé → Villageois'},
+  {i:['berry_bush','villager'],      o:['berry'],   keep:['berry_bush','villager'], t:4,  rep:1, d:'Buisson + Villageois → Baie'},
+  {i:['tree','villager'],            o:['wood'],    keep:['tree','villager'],       t:5,  rep:1, d:'Arbre + Villageois → Bois'},
+  {i:['rock','villager'],            o:['stone'],   keep:['rock','villager'],       t:6,  rep:1, d:'Rocher + Villageois → Pierre'},
+  {i:['farm','villager'],            o:['apple'],   keep:['farm','villager'],       t:7,  rep:1, d:'Ferme + Villageois → Pomme'},
+  {i:['flint','wood'],               o:['campfire'],           keep:[],             t:3,  rep:0, d:'Silex + Bois → Feu de camp'},
+  {i:['berry','campfire'],           o:['cooked_berry'],       keep:['campfire'],   t:2,  rep:0, d:'Feu + Baie → Baie cuite'},
+  {i:['apple','campfire'],           o:['stew'],               keep:['campfire'],   t:3,  rep:0, d:'Feu + Pomme → Ragoût'},
+  {i:['berry','berry','campfire'],   o:['stew'],               keep:['campfire'],   t:4,  rep:0, d:'Feu + 2 Baies → Ragoût'},
+  {i:['villager','wood','wood','wood'],            o:['plank'],  keep:['villager'], t:6,  rep:0, d:'Villageois + 3 Bois → Planche'},
+  {i:['stone','stone','stone','villager'],         o:['brick'],  keep:['villager'], t:6,  rep:0, d:'Villageois + 3 Pierres → Brique'},
+  {i:['brick','brick','plank','plank','villager'], o:['house'],  keep:[],           t:10, rep:0, d:'Villageois + 2 Planches + 2 Briques → Maison'},
+  {i:['brick','plank','plank','villager'],         o:['farm'],   keep:['villager'], t:8,  rep:0, d:'Villageois + 2 Planches + Brique → Ferme'},
+  {i:['flint','plank','villager'],                o:['sword'],  keep:['villager'], t:5,  rep:0, d:'Villageois + Planche + Silex → Épée'},
+  {i:['house','villager','villager'], o:['baby'],  keep:['house','villager','villager'], t:15, rep:0, d:'Maison + 2 Villageois → Bébé'},
+  {i:['baby'],                        o:['villager'], keep:[],                     t:10, rep:0, d:'Bébé → Villageois'},
+  {i:['sword','wolf'],               o:['bone'],        keep:['sword'],            t:4,  rep:0, d:'⚔️ Épée + Loup → Os'},
+  {i:['sword','goblin'],             o:['gold'],        keep:['sword'],            t:6,  rep:0, d:'⚔️ Épée + Gobelin → Or'},
+  {i:['sword','sword','troll'],      o:['gold','gold'], keep:['sword','sword'],    t:9,  rep:0, d:'⚔️ 2 Épées + Troll → 2 Or'},
+  {i:['bone','bone','bone'],         o:['gold'],        keep:[],                   t:4,  rep:0, d:'3 Os → Or'},
 ];
 
 const PACKS = {
@@ -125,28 +149,35 @@ const PACKS = {
     {t:'plank',w:30},{t:'brick',w:25},{t:'flint',w:20},
     {t:'villager',w:18},{t:'gold',w:20},{t:'stone',w:20},{t:'apple',w:15},{t:'sword',w:8},
   ]},
+  combat:{n:'Paquet Combat', cost:6, cnt:4, pool:[
+    {t:'sword',w:30},{t:'plank',w:20},{t:'flint',w:20},
+    {t:'stone',w:15},{t:'gold',w:15},{t:'bone',w:10},
+  ]},
 };
 
-// ── STATE ────────────────────────────────────────────────────────────────────
-const CW=82, CH=104, SO=24; // card size, stack offset
+const WIN_DAY=25, CW=82, CH=104, SO=24;
 let G={};
 
 function initG(){
-  G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false};
-  document.getElementById('table').innerHTML='';
+  G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false};
+  document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
   document.getElementById('log').innerHTML='';
+  ['overlay','victory','pause'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('b-combat').style.display='none';
   spawn('berry_bush',70,70); spawn('tree',200,70); spawn('villager',330,70);
   spawn('berry',460,70);     spawn('berry',460,180); spawn('flint',330,180);
-  updateHUD(); log('🌅 Empile les cartes pour crafter !');
+  updateHUD();
+  log('🌅 Empile les cartes pour crafter !');
+  log('⚔️ Première vague de monstres au Jour 5 !');
   requestAnimationFrame(loop);
 }
 
-// ── CARDS ────────────────────────────────────────────────────────────────────
 function spawn(type,x,y){
   const id=G.nid++; const d=CD[type];
-  G.cards[id]={id,type,x,y,sid:null};
+  G.cards[id]={id,type,x,y,sid:null,aggro:0};
   const el=document.createElement('div');
-  el.className='card'; el.id='c'+id;
+  el.className='card'+(d.monster?' monster':'');
+  el.id='c'+id;
   el.style.cssText=`left:${x}px;top:${y}px;background:${d.bg};color:${d.c};z-index:10;`;
   el.innerHTML=`<div class="card-emoji">${d.e}</div><div class="card-name">${d.n}</div><div class="card-bar"><div class="card-bar-fill"></div></div>`;
   el.addEventListener('mousedown',e=>{e.preventDefault();startDrag(e,id);});
@@ -157,7 +188,6 @@ function spawn(type,x,y){
 function cel(id){return document.getElementById('c'+id);}
 function delCard(id){const e=cel(id);if(e)e.remove();delete G.cards[id];}
 
-// ── STACKS ───────────────────────────────────────────────────────────────────
 function mkStack(ids){
   const sid=G.nid++;
   const root=G.cards[ids[0]];
@@ -181,7 +211,8 @@ function rmFromStack(cid){
   s.ids=s.ids.filter(i=>i!==cid); c.sid=null; s.recipe=null; s.prog=0;
   if(s.ids.length===0){dissolve(s.id);}
   else if(s.ids.length===1){
-    const last=s.ids[0]; G.cards[last].x=s.rx; G.cards[last].y=s.ry;
+    const last=s.ids[0];
+    G.cards[last].x=s.rx; G.cards[last].y=s.ry;
     G.cards[last].sid=null; dissolve(s.id); updateCV(last);
   } else {updateSV(s.id); checkRecipe(s.id);}
 }
@@ -189,11 +220,10 @@ function updateSV(sid){
   const s=G.stacks[sid]; if(!s)return;
   s.ids.forEach((cid,i)=>{
     const el=cel(cid); if(!el)return;
-    const x=s.rx, y=s.ry+i*SO;
-    el.style.left=x+'px'; el.style.top=y+'px'; el.style.zIndex=10+i;
-    G.cards[cid].x=x; G.cards[cid].y=y;
+    el.style.left=s.rx+'px'; el.style.top=(s.ry+i*SO)+'px'; el.style.zIndex=10+i;
+    G.cards[cid].x=s.rx; G.cards[cid].y=s.ry+i*SO;
     const bar=el.querySelector('.card-bar');
-    bar.style.display=(i===0&&s.recipe)?'block':'none';
+    if(bar)bar.style.display=(i===0&&s.recipe)?'block':'none';
   });
 }
 function updateCV(id){
@@ -202,10 +232,8 @@ function updateCV(id){
   el.querySelector('.card-bar').style.display='none';
 }
 
-// ── RECIPES ──────────────────────────────────────────────────────────────────
 function sortedTypes(ids){return ids.map(i=>G.cards[i].type).sort();}
 function arrEq(a,b){return a.length===b.length&&a.every((v,i)=>v===b[i]);}
-
 function checkRecipe(sid){
   const s=G.stacks[sid]; if(!s)return;
   const types=sortedTypes(s.ids);
@@ -214,47 +242,31 @@ function checkRecipe(sid){
   }
   s.recipe=null; updateSV(sid);
 }
-
 function execRecipe(sid){
   const s=G.stacks[sid]; if(!s||!s.recipe)return;
   const r=s.recipe, rx=s.rx, ry=s.ry;
-  // Determine kept vs consumed
-  const keepQ=[...r.keep];
-  const kept=[], gone=[];
+  const keepQ=[...r.keep], kept=[], gone=[];
   s.ids.forEach(cid=>{
     const t=G.cards[cid].type, ki=keepQ.indexOf(t);
     if(ki!==-1){kept.push(cid);keepQ.splice(ki,1);}
     else gone.push(cid);
   });
-  // Dissolve and clean
   kept.forEach(cid=>{G.cards[cid].sid=null;});
   dissolve(sid);
   gone.forEach(cid=>delCard(cid));
-  // Spawn output below stack
   const stackH=kept.length*SO+CH;
-  r.o.forEach((type,i)=>{
-    const nx=rx+(i%3)*(CW+8);
-    const ny=ry+stackH+16+Math.floor(i/3)*(CH+8);
-    spawn(type,nx,ny);
-  });
-  // Re-form kept cards
+  r.o.forEach((type,i)=>{spawn(type,rx+(i%3)*(CW+8),ry+stackH+16+Math.floor(i/3)*(CH+8));});
   if(kept.length>0){
     kept.forEach((cid,i)=>{G.cards[cid].x=rx;G.cards[cid].y=ry+i*SO;updateCV(cid);});
-    if(kept.length>1)mkStack(kept);
-    // Re-check recipe for kept stack (for repeating)
-    if(r.rep&&kept.length>1){
-      const ns=G.cards[kept[0]].sid; if(ns)checkRecipe(ns);
-    }
+    if(kept.length>1){const ns=mkStack(kept);if(r.rep)checkRecipe(ns);}
   }
-  const names=r.o.map(t=>CD[t].e+CD[t].n).join(', ');
-  log('✨ '+names+' créé !');
+  log('✨ '+r.o.map(t=>CD[t].e+CD[t].n).join(', ')+' créé !');
   updateHUD();
 }
 
-// ── DRAG ─────────────────────────────────────────────────────────────────────
 function startDrag(e,id){
-  if(G.over)return;
-  const c=G.cards[id], el=cel(id); if(!el)return;
+  if(G.over||G.paused)return;
+  const c=G.cards[id],el=cel(id); if(!el)return;
   const tr=document.getElementById('table').getBoundingClientRect();
   const er=el.getBoundingClientRect();
   if(c.sid)rmFromStack(id);
@@ -264,8 +276,7 @@ function startDrag(e,id){
 document.addEventListener('mousemove',e=>{
   if(!G.drag)return;
   const c=G.cards[G.drag.id],el=cel(G.drag.id); if(!c||!el)return;
-  c.x=e.clientX-G.drag.tl-G.drag.ox;
-  c.y=e.clientY-G.drag.tt-G.drag.oy;
+  c.x=e.clientX-G.drag.tl-G.drag.ox; c.y=e.clientY-G.drag.tt-G.drag.oy;
   el.style.left=c.x+'px'; el.style.top=c.y+'px';
 });
 document.addEventListener('mouseup',()=>{
@@ -273,10 +284,7 @@ document.addEventListener('mouseup',()=>{
   const id=G.drag.id; G.drag=null;
   const el=cel(id); if(el){el.classList.remove('dragging');el.style.zIndex=10;}
   const tgt=findTarget(id);
-  if(tgt){
-    if(tgt.sid)addToStack(tgt.sid,id);
-    else mkStack([tgt.id,id]);
-  }
+  if(tgt){if(tgt.sid)addToStack(tgt.sid,id);else mkStack([tgt.id,id]);}
   updateHUD();
 });
 function findTarget(dragId){
@@ -293,57 +301,119 @@ function findTarget(dragId){
   return null;
 }
 
-// ── SELL ─────────────────────────────────────────────────────────────────────
 function sellCard(id){
-  if(G.over||!G.cards[id])return;
-  const t=G.cards[id].type; if(CD[t].node)return; // can't sell node cards
+  if(G.over||G.paused||!G.cards[id])return;
+  const t=G.cards[id].type;
+  if(CD[t].node||CD[t].monster)return;
   if(G.cards[id].sid)rmFromStack(id);
   delCard(id); G.gold+=1; log('💰 +1🪙 (vente)'); updateHUD();
 }
 
-// ── GAME LOOP ────────────────────────────────────────────────────────────────
+function monsterAttack(mid){
+  const c=G.cards[mid]; if(!c)return;
+  const mName=CD[c.type].n;
+  if(c.sid)rmFromStack(mid);
+  delCard(mid);
+  const villagers=Object.values(G.cards).filter(c=>c.type==='villager');
+  if(villagers.length>0){
+    const v=villagers[0];
+    if(v.sid)rmFromStack(v.id);
+    delCard(v.id);
+    log('💀 Le '+mName+' a tué un villageois !');
+    if(countT('villager')+countT('baby')===0){G.over=true;showOverMonster();return;}
+  } else {
+    log('💀 Le '+mName+' ravage le village !');
+    G.over=true; showOverMonster(); return;
+  }
+  updateHUD();
+}
+
+function spawnWave(){
+  const waveNum=Math.floor(G.moon/5);
+  let monsters;
+  if(waveNum===1)      monsters=['wolf'];
+  else if(waveNum===2) monsters=['wolf','wolf'];
+  else if(waveNum===3) monsters=['wolf','goblin'];
+  else if(waveNum===4) monsters=['goblin','goblin'];
+  else if(waveNum===5) monsters=['goblin','goblin','troll'];
+  else                 monsters=['troll',...Array(Math.min(waveNum-3,4)).fill('goblin')];
+  const tbl=document.getElementById('table').getBoundingClientRect();
+  monsters.forEach(type=>{
+    spawn(type,40+Math.random()*(tbl.width-180),40+Math.random()*(tbl.height-180));
+  });
+  const el=document.getElementById('wave-alert');
+  el.textContent='⚔️ Vague '+waveNum+' ! '+monsters.map(t=>CD[t].e+' '+CD[t].n).join(', ')+' !';
+  el.style.display='block';
+  setTimeout(()=>el.style.display='none',3500);
+  log('⚔️ Vague '+waveNum+' ! Empile une Épée sur les monstres !');
+}
+
 function loop(ts){
-  if(G.over)return;
+  if(G.over||G.paused)return;
   if(!G.ts)G.ts=ts;
   const dt=(ts-G.ts)/1000; G.ts=ts;
-  // Moon progress
+
   G.moonProg+=dt/G.moonDur;
-  if(G.moonProg>=1){G.moonProg=0;G.moon++;endMoon();}
+  if(G.moonProg>=1){G.moonProg=0;G.moon++;endMoon();if(G.over)return;}
   document.getElementById('moon-fill').style.width=(G.moonProg*100)+'%';
-  // Recipe timers
+
+  const toExec=[];
   for(const [sidStr,s] of Object.entries(G.stacks)){
     if(!s.recipe)continue;
     s.prog+=dt/s.recipe.t;
     const fill=cel(s.ids[0])?.querySelector('.card-bar-fill');
-    if(fill)fill.style.width=(Math.min(s.prog,1)*100)+'%';
-    if(s.prog>=1){s.prog=0;execRecipe(parseInt(sidStr));}
+    if(fill){fill.style.background='#4ade80';fill.style.width=(Math.min(s.prog,1)*100)+'%';}
+    if(s.prog>=1){s.prog=0;toExec.push(parseInt(sidStr));}
   }
+  toExec.forEach(sid=>{if(G.stacks[sid])execRecipe(sid);});
+
+  const toAttack=[];
+  for(const [idStr,c] of Object.entries(G.cards)){
+    const id=parseInt(idStr), d=CD[c.type];
+    if(!d||!d.monster)continue;
+    const inCombat=c.sid&&G.stacks[c.sid]?.recipe;
+    if(!inCombat){
+      c.aggro=(c.aggro||0)+dt;
+      const el=cel(id);
+      if(el){
+        const bar=el.querySelector('.card-bar'), fill=el.querySelector('.card-bar-fill');
+        if(bar)bar.style.display='block';
+        if(fill){fill.style.background='#ef4444';fill.style.width=Math.min(c.aggro/d.aggroMax*100,100)+'%';}
+      }
+      if(c.aggro>=d.aggroMax)toAttack.push(id);
+    }
+  }
+  toAttack.forEach(id=>{if(G.cards[id])monsterAttack(id);});
+  if(G.over)return;
+
   requestAnimationFrame(loop);
 }
 
-// ── MOON / FOOD ───────────────────────────────────────────────────────────────
 function endMoon(){
+  if(G.moon>WIN_DAY){G.over=true;showVictory();return;}
   const pop=countT('villager')+countT('baby');
-  if(pop===0){log('🌙 Lune '+G.moon);updateHUD();return;}
-  // Collect food cards sorted by value desc (use big ones first)
-  const fCards=Object.values(G.cards)
-    .filter(c=>CD[c.type]&&CD[c.type].food)
-    .sort((a,b)=>(CD[b.type].food||0)-(CD[a.type].food||0));
-  const total=fCards.reduce((s,c)=>s+(CD[c.type].food||0),0);
-  if(total<pop){G.over=true;showOver();return;}
-  let need=pop;
-  for(const fc of fCards){
-    if(need<=0)break;
-    const fv=CD[fc.type].food;
-    if(fc.sid)rmFromStack(fc.id);
-    delCard(fc.id); need-=fv;
+  if(pop>0){
+    const fCards=Object.values(G.cards)
+      .filter(c=>CD[c.type]?.food)
+      .sort((a,b)=>(CD[b.type].food||0)-(CD[a.type].food||0));
+    const total=fCards.reduce((s,c)=>s+(CD[c.type].food||0),0);
+    if(total<pop){G.over=true;showOverFamine();return;}
+    let need=pop;
+    for(const fc of fCards){
+      if(need<=0)break;
+      if(fc.sid)rmFromStack(fc.id);
+      delCard(fc.id); need-=CD[fc.type].food;
+    }
+    log('🌙 Jour '+G.moon+' — '+pop+' villageois nourris !');
+  } else {
+    log('🌙 Jour '+G.moon);
   }
-  log('🌙 Lune '+G.moon+' — '+pop+' villageois nourris !');
+  if(G.moon%5===0)spawnWave();
+  if(G.moon>=3)document.getElementById('b-combat').style.display='block';
   updateHUD();
 }
 function countT(t){return Object.values(G.cards).filter(c=>c.type===t).length;}
 
-// ── PACKS ────────────────────────────────────────────────────────────────────
 function buyPack(key){
   const p=PACKS[key]; if(!p||G.gold<p.cost)return;
   G.gold-=p.cost;
@@ -351,9 +421,7 @@ function buyPack(key){
   const cx=tbl.width/2,cy=tbl.height/2;
   for(let i=0;i<p.cnt;i++){
     const type=wRand(p.pool);
-    const x=cx+(Math.random()-.5)*220-CW/2;
-    const y=cy+(Math.random()-.5)*160-CH/2;
-    spawn(type,Math.max(4,x),Math.max(4,y));
+    spawn(type,Math.max(4,cx+(Math.random()-.5)*220-CW/2),Math.max(4,cy+(Math.random()-.5)*160-CH/2));
   }
   log('📦 Ouvert : '+p.n); updateHUD();
 }
@@ -364,41 +432,68 @@ function wRand(pool){
   return pool[pool.length-1].t;
 }
 
-// ── HUD ───────────────────────────────────────────────────────────────────────
 function updateHUD(){
   const pop=countT('villager')+countT('baby');
-  const food=Object.values(G.cards)
-    .filter(c=>CD[c.type]?.food).reduce((s,c)=>s+(CD[c.type].food||0),0);
-  document.getElementById('hmoon').textContent=G.moon;
+  const food=Object.values(G.cards).filter(c=>CD[c.type]?.food).reduce((s,c)=>s+(CD[c.type].food||0),0);
+  document.getElementById('hday').textContent=G.moon;
   document.getElementById('hgold').textContent=G.gold;
   document.getElementById('hfood').textContent=food;
   document.getElementById('hpop').textContent=pop;
   document.getElementById('hfood-wrap').style.color=food>=pop?'#86efac':'#fca5a5';
+  const nextWave=G.moon%5===0?G.moon+5:Math.ceil(G.moon/5)*5;
+  document.getElementById('obj').textContent='⚔️ Vague J'+Math.min(nextWave,WIN_DAY)+' | 🎯 Objectif : J'+WIN_DAY;
   Object.keys(PACKS).forEach(k=>{
     const b=document.getElementById('b-'+k);
     if(b)b.disabled=G.gold<PACKS[k].cost;
   });
 }
 
-// ── LOG ───────────────────────────────────────────────────────────────────────
 function log(msg){
-  const d=document.getElementById('log');
-  const el=document.createElement('div');
+  const d=document.getElementById('log'), el=document.createElement('div');
   el.className='litem'; el.textContent=msg;
   d.appendChild(el); setTimeout(()=>el.remove(),5000);
 }
 
-// ── GAME OVER ─────────────────────────────────────────────────────────────────
-function showOver(){
-  const o=document.getElementById('overlay');
-  o.style.display='flex';
-  document.getElementById('fscore').textContent='Tu as survécu '+G.moon+' lunes.';
+function showOverFamine(){
+  document.getElementById('over-title').textContent='☠️ Famine !';
+  document.getElementById('over-msg').textContent='Tes villageois sont morts de faim.';
+  document.getElementById('fscore').textContent='Tu as survécu '+G.moon+' jours.';
+  document.getElementById('overlay').style.display='flex';
+}
+function showOverMonster(){
+  document.getElementById('over-title').textContent='💀 Défaite !';
+  document.getElementById('over-msg').textContent='Tous tes villageois ont été tués par des monstres.';
+  document.getElementById('fscore').textContent='Tu as survécu '+G.moon+' jours.';
+  document.getElementById('overlay').style.display='flex';
+}
+function showVictory(){
+  document.getElementById('vscore').textContent='Tu as repoussé toutes les vagues et survécu '+WIN_DAY+' jours !';
+  document.getElementById('victory').style.display='flex';
 }
 function restart(){
-  document.getElementById('overlay').style.display='none'; initG();
+  ['overlay','victory','pause'].forEach(id=>document.getElementById(id).style.display='none');
+  initG();
 }
 
-// ── RECIPE BOOK ───────────────────────────────────────────────────────────────
+function togglePause(){
+  if(G.over)return;
+  G.paused=!G.paused;
+  const po=document.getElementById('pause');
+  if(G.paused){
+    const nextWave=G.moon%5===0?G.moon+5:Math.ceil(G.moon/5)*5;
+    document.getElementById('pause-info').textContent=
+      'Jour '+G.moon+' / '+WIN_DAY+' — Prochaine vague : Jour '+Math.min(nextWave,WIN_DAY);
+    po.style.display='flex';
+  } else {
+    po.style.display='none';
+    G.ts=null;
+    requestAnimationFrame(loop);
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!G.over)togglePause();
+});
+
 function showRB(){
   document.getElementById('rlist').innerHTML=RECIPES.map(r=>`
     <div class="rrow">
@@ -411,7 +506,6 @@ function showRB(){
 }
 function closeRB(){document.getElementById('rb').style.display='none';}
 
-// ── START ─────────────────────────────────────────────────────────────────────
 initG();
 </script>
 </body>
