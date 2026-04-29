@@ -55,6 +55,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <button class="pbtn" id="b-forest"  onclick="buyPack('forest')">🌲 Paquet Forêt — 5🪙</button>
   <button class="pbtn" id="b-adv"     onclick="buyPack('adv')">🏗️ Paquet Avancé — 8🪙</button>
   <button class="pbtn" id="b-combat"  onclick="buyPack('combat')" style="display:none;">⚔️ Paquet Combat — 6🪙</button>
+  <button class="pbtn" id="b-explor"  onclick="buyPack('explor')" style="display:none;">🌿 Paquet Exploration — 7🪙</button>
 </div>
 <div id="log"></div>
 
@@ -108,6 +109,12 @@ const CD = {
   sword:        {n:'Épée',        e:'⚔️', bg:'#e2e8f0',c:'#1e293b'},
   farm:         {n:'Ferme',       e:'🌾', bg:'#fef9c3',c:'#854d0e',node:1},
   bone:         {n:'Os',          e:'🦴', bg:'#f1f5f9',c:'#64748b'},
+  shield:       {n:'Bouclier',   e:'🛡️', bg:'#cbd5e1',c:'#0f172a'},
+  forest_zone:  {n:'Zone Forêt', e:'🌿', bg:'#bbf7d0',c:'#14532d',node:1},
+  cave_zone:    {n:'Grotte',     e:'⛰️', bg:'#94a3b8',c:'#0f172a',node:1},
+  iron_ore:     {n:'Minerai',    e:'🔩', bg:'#64748b',c:'#f8fafc'},
+  forge:        {n:'Forge',      e:'🔨', bg:'#fef3c7',c:'#7c2d12',node:1},
+  iron_sword:   {n:'Épée de Fer',e:'🗡️', bg:'#e2e8f0',c:'#0f172a'},
   wolf:         {n:'Loup',        e:'🐺', bg:'#374151',c:'#f9fafb',monster:1,aggroMax:15},
   goblin:       {n:'Gobelin',     e:'👺', bg:'#4c1d95',c:'#f5f3ff',monster:1,aggroMax:12},
   troll:        {n:'Troll',       e:'👹', bg:'#7f1d1d',c:'#fef2f2',monster:1,aggroMax:10},
@@ -133,6 +140,18 @@ const RECIPES = [
   {i:['sword','goblin'],             o:['gold'],        keep:['sword'],            t:6,  rep:0, d:'⚔️ Épée + Gobelin → Or'},
   {i:['sword','sword','troll'],      o:['gold','gold'], keep:['sword','sword'],    t:9,  rep:0, d:'⚔️ 2 Épées + Troll → 2 Or'},
   {i:['bone','bone','bone'],         o:['gold'],        keep:[],                   t:4,  rep:0, d:'3 Os → Or'},
+  // Bouclier
+  {i:['plank','plank','villager'],   o:['shield'],      keep:['villager'],          t:5,  rep:0, d:'🛡️ 2 Planches + Villageois → Bouclier'},
+  // Exploration
+  {i:['forest_zone','villager'],     o:['wood','berry'],keep:['forest_zone','villager'], t:8, rep:1, d:'🌿 Zone Forêt + Villageois → Bois + Baie'},
+  {i:['cave_zone','villager'],       o:['iron_ore'],    keep:['cave_zone','villager'],   t:10,rep:1, d:'⛰️ Grotte + Villageois → Minerai'},
+  // Forge
+  {i:['stone','stone','stone','plank','villager'], o:['forge'], keep:['villager'],  t:12, rep:0, d:'🔨 3 Pierres + Planche + Villageois → Forge'},
+  {i:['forge','iron_ore','iron_ore','villager'],   o:['iron_sword'], keep:['forge','villager'], t:8, rep:0, d:'🗡️ Forge + 2 Minerais + Villageois → Épée de Fer'},
+  // Combat épée de fer (plus rapide)
+  {i:['iron_sword','wolf'],          o:['bone'],        keep:['iron_sword'],        t:2,  rep:0, d:'🗡️ Épée de Fer + Loup → Os'},
+  {i:['iron_sword','goblin'],        o:['gold'],        keep:['iron_sword'],        t:3,  rep:0, d:'🗡️ Épée de Fer + Gobelin → Or'},
+  {i:['iron_sword','troll'],         o:['gold','gold'], keep:['iron_sword'],        t:5,  rep:0, d:'🗡️ Épée de Fer + Troll → 2 Or'},
 ];
 
 const PACKS = {
@@ -153,6 +172,10 @@ const PACKS = {
     {t:'sword',w:30},{t:'plank',w:20},{t:'flint',w:20},
     {t:'stone',w:15},{t:'gold',w:15},{t:'bone',w:10},
   ]},
+  explor:{n:'Paquet Exploration', cost:7, cnt:4, pool:[
+    {t:'forest_zone',w:25},{t:'cave_zone',w:20},{t:'iron_ore',w:30},
+    {t:'plank',w:20},{t:'stone',w:15},{t:'gold',w:10},
+  ]},
 };
 
 const WIN_DAY=25, CW=82, CH=104, SO=24;
@@ -164,6 +187,7 @@ function initG(){
   document.getElementById('log').innerHTML='';
   ['overlay','victory','pause'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('b-combat').style.display='none';
+  document.getElementById('b-explor').style.display='none';
   spawn('berry_bush',70,70); spawn('tree',200,70); spawn('villager',330,70);
   spawn('berry',460,70);     spawn('berry',460,180); spawn('flint',330,180);
   updateHUD();
@@ -314,6 +338,15 @@ function monsterAttack(mid){
   const mName=CD[c.type].n;
   if(c.sid)rmFromStack(mid);
   delCard(mid);
+  // Bouclier absorbe le coup
+  const shields=Object.values(G.cards).filter(c=>c.type==='shield');
+  if(shields.length>0){
+    const sh=shields[0];
+    if(sh.sid)rmFromStack(sh.id);
+    delCard(sh.id);
+    log('🛡️ Le bouclier a protégé un villageois contre le '+mName+' !');
+    updateHUD(); return;
+  }
   const villagers=Object.values(G.cards).filter(c=>c.type==='villager');
   if(villagers.length>0){
     const v=villagers[0];
@@ -410,6 +443,7 @@ function endMoon(){
   }
   if(G.moon%5===0)spawnWave();
   if(G.moon>=3)document.getElementById('b-combat').style.display='block';
+  if(G.moon>=8)document.getElementById('b-explor').style.display='block';
   updateHUD();
 }
 function countT(t){return Object.values(G.cards).filter(c=>c.type===t).length;}
