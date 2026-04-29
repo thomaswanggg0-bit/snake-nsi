@@ -6,11 +6,15 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;user-select:none;}
 body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;}
+/* HUD */
 #hud{background:#0f2310;border-bottom:2px solid #2d5a2d;padding:8px 14px;display:flex;align-items:center;gap:14px;flex-shrink:0;z-index:100;flex-wrap:wrap;}
 #moon-wrap{flex:1;min-width:80px;height:18px;background:#0a1a0a;border-radius:9px;overflow:hidden;border:1px solid #2d5a2d;}
 #moon-fill{height:100%;width:0%;background:linear-gradient(90deg,#f7d060,#e94560);border-radius:9px;}
 .stat{color:#ccc;font-size:13px;white-space:nowrap;}.stat b{color:#fff;}
+#save-badge{font-size:12px;color:#4ade80;opacity:0;transition:opacity .4s;}
+/* Table */
 #table{flex:1;position:relative;overflow:hidden;background:#1e4a1e;background-image:radial-gradient(circle at 1px 1px,#265226 1px,transparent 0);background-size:28px 28px;cursor:default;}
+/* Cards */
 .card{position:absolute;width:82px;height:104px;border-radius:9px;cursor:grab;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(0,0,0,0.25);box-shadow:0 3px 8px rgba(0,0,0,0.4);transition:box-shadow .1s;}
 .card:hover{box-shadow:0 0 0 2px #f7d060,0 3px 8px rgba(0,0,0,0.4);}
 .card.monster{border-color:rgba(239,68,68,0.6);}
@@ -20,10 +24,9 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 .card-name{font-size:10px;font-weight:700;text-align:center;padding:0 4px;line-height:1.2;pointer-events:none;}
 .card-bar{position:absolute;bottom:0;left:0;right:0;height:5px;background:rgba(0,0,0,0.2);border-radius:0 0 7px 7px;overflow:hidden;display:none;}
 .card-bar-fill{height:100%;background:#4ade80;width:0%;}
-/* Shake quand pas de recette */
+/* Animations */
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 .shake{animation:shake .35s ease;}
-/* Monstre qui pulse quand danger > 70% */
 @keyframes pulse-danger{0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,.8),0 3px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 0 5px rgba(239,68,68,1),0 0 16px rgba(239,68,68,.7)}}
 .danger-pulse{animation:pulse-danger .55s infinite;}
 /* Tooltip */
@@ -32,67 +35,113 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 #tooltip .tt-desc{color:#9ca;margin-bottom:5px;font-size:11px;}
 #tooltip .tt-r{color:#f7d060;font-size:11px;line-height:1.6;}
 #tooltip .tt-label{color:#6b8;font-size:10px;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px;}
+/* Shop */
 #shop{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:7px;z-index:100;}
 .pbtn{background:#c0392b;color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 8px rgba(0,0,0,0.4);line-height:1.3;text-align:left;}
 .pbtn:hover{background:#a93226;}.pbtn:disabled{background:#555;cursor:not-allowed;}
 .pbtn small{display:block;font-size:10px;font-weight:400;opacity:.75;margin-top:1px;}
+/* Log */
 #log{position:absolute;bottom:12px;left:12px;z-index:100;max-width:240px;}
 .litem{background:rgba(0,0,0,.75);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;margin-bottom:4px;animation:fi .3s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+/* Overlays jeu */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;justify-content:center;align-items:center;flex-direction:column;color:#fff;gap:12px;text-align:center;padding:20px;}
 .overlay h2{font-size:42px;}.overlay p{font-size:16px;color:#ccc;}
-.overlay .btn-row{display:flex;gap:12px;margin-top:8px;}
-.obtn{background:#c0392b;color:#fff;border:none;padding:11px 28px;border-radius:8px;font-size:15px;cursor:pointer;}
-.obtn:hover{background:#a93226;}.obtn.green{background:#16a34a;}.obtn.green:hover{background:#15803d;}
-#rb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:8000;justify-content:center;align-items:center;}
-#rbc{background:#0f2310;border:2px solid #2d5a2d;border-radius:12px;padding:20px;max-width:500px;width:92%;color:#fff;max-height:80vh;overflow-y:auto;}
-#rbc h3{margin-bottom:12px;font-size:18px;}
-.rrow{font-size:13px;padding:6px 0;border-bottom:1px solid #1e3a1e;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.overlay .btn-row{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;justify-content:center;}
+.obtn{background:#1a4a1a;color:#fff;border:2px solid #2d5a2d;padding:10px 22px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:700;}
+.obtn:hover{background:#265226;border-color:#4a8a4a;}
+.obtn.red{background:#c0392b;border-color:#e74c3c;}.obtn.red:hover{background:#a93226;}
+.obtn.green{background:#16a34a;border-color:#22c55e;}.obtn.green:hover{background:#15803d;}
+/* Wave alert */
 #wave-alert{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(160,0,0,0.93);color:#fff;font-size:20px;font-weight:700;padding:14px 30px;border-radius:12px;z-index:500;pointer-events:none;text-align:center;border:2px solid #ef4444;}
 #obj{font-size:11px;color:#f7d060;white-space:nowrap;}
+/* ── MENU PRINCIPAL ─────────────────────────────────────────── */
+#main-menu{display:flex;position:fixed;inset:0;background:linear-gradient(160deg,#071407 0%,#0f2a0f 40%,#0a1e0a 100%);z-index:99000;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.mm-logo{font-size:72px;margin-bottom:4px;filter:drop-shadow(0 0 20px rgba(100,200,80,.4));}
+.mm-title{font-size:52px;font-weight:900;color:#f7d060;letter-spacing:4px;text-shadow:0 0 30px rgba(247,208,96,.4);}
+.mm-sub{color:#6b8;font-size:14px;margin-bottom:20px;}
+.mbtn{background:#0f2310;color:#d1fae5;border:2px solid #2d5a2d;border-radius:10px;padding:14px 0;cursor:pointer;font-size:16px;font-weight:700;width:260px;transition:background .15s,border-color .15s,transform .1s;text-align:center;}
+.mbtn:hover{background:#1a3a1a;border-color:#4a8a4a;transform:translateY(-2px);}
+.mbtn:disabled{background:#111;border-color:#333;color:#555;cursor:not-allowed;transform:none;}
+.mbtn.disc{background:#1a0a0a;border-color:#4a1a1a;color:#fca5a5;}
+.mbtn.disc:hover{background:#2a1010;border-color:#8a2d2d;}
+#resume-info{color:#6b8;font-size:12px;margin-top:-8px;height:16px;}
+.mm-version{position:absolute;bottom:16px;color:#2d5a2d;font-size:11px;}
 </style>
 </head>
 <body>
+<!-- HUD -->
 <div id="hud">
   <span class="stat">📅 Jour <b id="hday">1</b>/25</span>
   <div id="moon-wrap"><div id="moon-fill"></div></div>
   <span class="stat">🪙 <b id="hgold">5</b></span>
   <span class="stat" id="hfood-wrap">🍖 <b id="hfood">0</b>/<b id="hpop">0</b></span>
   <span id="obj"></span>
+  <span id="save-badge">💾</span>
   <button onclick="showRB()" style="background:#1a4a1a;color:#8f8;border:1px solid #4a8a4a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">📖 Recettes</button>
   <span style="color:#666;font-size:11px;">Clic-droit=vendre | Échap=Pause</span>
 </div>
+
+<!-- Table de jeu -->
 <div id="table"><div id="wave-alert"></div></div>
 <div id="shop"></div>
 <div id="log"></div>
 <div id="tooltip"><div class="tt-name"></div><div class="tt-desc"></div><div class="tt-label"></div><div class="tt-r"></div></div>
 
+<!-- Overlay Défaite / Famine -->
 <div class="overlay" id="overlay">
   <h2 id="over-title">☠️ Défaite !</h2>
   <p id="over-msg"></p><p id="fscore"></p>
-  <div class="btn-row"><button class="obtn" onclick="restart()">🔄 Recommencer</button></div>
+  <div class="btn-row">
+    <button class="obtn green" onclick="startNewGame()">🔄 Recommencer</button>
+    <button class="obtn" onclick="showMainMenu()">🏠 Menu Principal</button>
+  </div>
 </div>
+
+<!-- Overlay Victoire -->
 <div class="overlay" id="victory">
   <h2>🏆 Victoire !</h2>
   <p>Tu as survécu 25 jours et repoussé toutes les vagues !</p>
   <p id="vscore"></p>
-  <div class="btn-row"><button class="obtn green" onclick="restart()">🔄 Rejouer</button></div>
+  <div class="btn-row">
+    <button class="obtn green" onclick="startNewGame()">🔄 Rejouer</button>
+    <button class="obtn" onclick="showMainMenu()">🏠 Menu Principal</button>
+  </div>
 </div>
+
+<!-- Overlay Pause -->
 <div class="overlay" id="pause">
   <h2>⏸ Pause</h2>
   <p id="pause-info"></p>
   <div class="btn-row">
     <button class="obtn green" onclick="togglePause()">▶ Reprendre</button>
-    <button class="obtn" onclick="restart()">🔄 Recommencer</button>
+    <button class="obtn" onclick="manualSave()">💾 Sauvegarder</button>
+  </div>
+  <div class="btn-row">
+    <button class="obtn red" onclick="startNewGame()">🔄 Recommencer</button>
+    <button class="obtn" onclick="goMainMenu()">🏠 Menu Principal</button>
   </div>
 </div>
 
+<!-- Livre de recettes -->
 <div id="rb" onclick="closeRB()">
-  <div id="rbc" onclick="event.stopPropagation()">
-    <h3>📖 Recettes</h3>
+  <div id="rbc" onclick="event.stopPropagation()" style="background:#0f2310;border:2px solid #2d5a2d;border-radius:12px;padding:20px;max-width:500px;width:92%;color:#fff;max-height:80vh;overflow-y:auto;z-index:8001;position:relative;">
+    <h3 style="margin-bottom:12px;font-size:18px;">📖 Recettes</h3>
     <div id="rlist"></div>
     <button onclick="closeRB()" style="margin-top:14px;background:#c0392b;color:#fff;border:none;padding:7px 18px;border-radius:6px;cursor:pointer;">Fermer</button>
   </div>
+</div>
+
+<!-- ── MENU PRINCIPAL ── -->
+<div id="main-menu">
+  <div class="mm-logo">🏘️</div>
+  <div class="mm-title">STACKLANDS</div>
+  <div class="mm-sub">Fan Game — Survive 25 jours, repousse les vagues</div>
+  <button class="mbtn" onclick="startNewGame()">🆕 Nouvelle Partie</button>
+  <button class="mbtn" id="btn-resume" onclick="resumeGame()" disabled>▶ Reprendre la partie</button>
+  <p id="resume-info"></p>
+  <button class="mbtn disc" onclick="disconnect()">🚪 Déconnexion</button>
+  <div class="mm-version">v3 — Fan Game non-officiel</div>
 </div>
 
 <script>
@@ -101,32 +150,32 @@ const CD = {
   berry_bush:   {n:'Buisson',     e:'🫐', bg:'#bbf7d0',c:'#14532d',node:1,   desc:'Produit des baies avec un villageois'},
   tree:         {n:'Arbre',       e:'🌳', bg:'#dcfce7',c:'#14532d',node:1,   desc:'Produit du bois avec un villageois'},
   rock:         {n:'Rocher',      e:'🪨', bg:'#e2e8f0',c:'#334155',node:1,   desc:'Produit de la pierre avec un villageois'},
-  berry:        {n:'Baie',        e:'🫐', bg:'#f3e8ff',c:'#6b21a8',food:1,   desc:'Nourriture : +1 par villageois'},
-  wood:         {n:'Bois',        e:'🪵', bg:'#fef3c7',c:'#92400e',          desc:'Matériau de base pour crafter'},
-  stone:        {n:'Pierre',      e:'🪨', bg:'#f1f5f9',c:'#475569',          desc:'Matériau solide pour construire'},
-  flint:        {n:'Silex',       e:'🔷', bg:'#dbeafe',c:'#1e40af',          desc:'Permet de faire du feu ou une arme'},
+  berry:        {n:'Baie',        e:'🫐', bg:'#f3e8ff',c:'#6b21a8',food:1,   desc:'Nourriture : +1'},
+  wood:         {n:'Bois',        e:'🪵', bg:'#fef3c7',c:'#92400e',          desc:'Matériau de base'},
+  stone:        {n:'Pierre',      e:'🪨', bg:'#f1f5f9',c:'#475569',          desc:'Matériau pour construire'},
+  flint:        {n:'Silex',       e:'🔷', bg:'#dbeafe',c:'#1e40af',          desc:'Pour faire du feu ou une arme'},
   gold:         {n:'Or',          e:'🪙', bg:'#fef9c3',c:'#a16207',          desc:'Monnaie pour acheter des paquets'},
-  villager:     {n:'Villageois',  e:'🧑', bg:'#dbeafe',c:'#1e3a8a',          desc:'Travaille sur les ressources et craft'},
-  baby:         {n:'Bébé',        e:'👶', bg:'#fce7f3',c:'#9d174d',          desc:'Grandit en villageois avec le temps'},
-  plank:        {n:'Planche',     e:'🟫', bg:'#fef3c7',c:'#78350f',          desc:'Bois transformé, utile pour construire'},
-  brick:        {n:'Brique',      e:'🧱', bg:'#fee2e2',c:'#991b1b',          desc:'Pierre transformée, pour les bâtiments'},
-  campfire:     {n:'Feu de camp', e:'🔥', bg:'#fff7ed',c:'#c2410c',node:1,   desc:'Permet de cuisiner la nourriture'},
+  villager:     {n:'Villageois',  e:'🧑', bg:'#dbeafe',c:'#1e3a8a',          desc:'Travaille sur ressources et craft'},
+  baby:         {n:'Bébé',        e:'👶', bg:'#fce7f3',c:'#9d174d',          desc:'Grandit en villageois'},
+  plank:        {n:'Planche',     e:'🟫', bg:'#fef3c7',c:'#78350f',          desc:'Bois transformé'},
+  brick:        {n:'Brique',      e:'🧱', bg:'#fee2e2',c:'#991b1b',          desc:'Pierre transformée'},
+  campfire:     {n:'Feu de camp', e:'🔥', bg:'#fff7ed',c:'#c2410c',node:1,   desc:'Permet de cuisiner'},
   house:        {n:'Maison',      e:'🏠', bg:'#d1fae5',c:'#065f46',node:1,   desc:'Permet d\'avoir des bébés'},
-  cooked_berry: {n:'Baie cuite',  e:'🍇', bg:'#f5d0fe',c:'#86198f',food:3,   desc:'Nourriture : +3 par villageois'},
-  stew:         {n:'Ragoût',      e:'🍲', bg:'#fef3c7',c:'#92400e',food:5,   desc:'Nourriture : +5 par villageois'},
-  apple:        {n:'Pomme',       e:'🍎', bg:'#fee2e2',c:'#b91c1c',food:2,   desc:'Nourriture : +2 par villageois'},
+  cooked_berry: {n:'Baie cuite',  e:'🍇', bg:'#f5d0fe',c:'#86198f',food:3,   desc:'Nourriture : +3'},
+  stew:         {n:'Ragoût',      e:'🍲', bg:'#fef3c7',c:'#92400e',food:5,   desc:'Nourriture : +5'},
+  apple:        {n:'Pomme',       e:'🍎', bg:'#fee2e2',c:'#b91c1c',food:2,   desc:'Nourriture : +2'},
   sword:        {n:'Épée',        e:'⚔️', bg:'#e2e8f0',c:'#1e293b',          desc:'Combat les monstres (empile sur eux)'},
-  farm:         {n:'Ferme',       e:'🌾', bg:'#fef9c3',c:'#854d0e',node:1,   desc:'Produit des pommes avec un villageois'},
+  farm:         {n:'Ferme',       e:'🌾', bg:'#fef9c3',c:'#854d0e',node:1,   desc:'Produit des pommes'},
   bone:         {n:'Os',          e:'🦴', bg:'#f1f5f9',c:'#64748b',          desc:'Butin du loup. 3 Os → Or'},
   shield:       {n:'Bouclier',    e:'🛡️', bg:'#cbd5e1',c:'#0f172a',          desc:'Bloque une attaque de monstre'},
   forest_zone:  {n:'Zone Forêt',  e:'🌿', bg:'#bbf7d0',c:'#14532d',node:1,  desc:'Exploration : Bois + Baie en boucle'},
-  cave_zone:    {n:'Grotte',      e:'⛰️', bg:'#94a3b8',c:'#0f172a',node:1,  desc:'Exploration : Minerai de fer en boucle'},
-  iron_ore:     {n:'Minerai',     e:'🔩', bg:'#64748b',c:'#f8fafc',          desc:'Nécessaire pour forger une Épée de Fer'},
-  forge:        {n:'Forge',       e:'🔨', bg:'#fef3c7',c:'#7c2d12',node:1,  desc:'Permet de fabriquer l\'Épée de Fer'},
-  iron_sword:   {n:'Épée de Fer', e:'🗡️', bg:'#e2e8f0',c:'#0f172a',         desc:'Épée améliorée : combat 2-3× plus vite'},
-  wolf:         {n:'Loup',        e:'🐺', bg:'#374151',c:'#f9fafb',monster:1,aggroMax:15, desc:'Attaque dans 15s si pas combattu'},
-  goblin:       {n:'Gobelin',     e:'👺', bg:'#4c1d95',c:'#f5f3ff',monster:1,aggroMax:12, desc:'Attaque dans 12s. Laisse de l\'Or'},
-  troll:        {n:'Troll',       e:'👹', bg:'#7f1d1d',c:'#fef2f2',monster:1,aggroMax:10, desc:'Attaque dans 10s. Nécessite 2 Épées'},
+  cave_zone:    {n:'Grotte',      e:'⛰️', bg:'#94a3b8',c:'#0f172a',node:1,  desc:'Exploration : Minerai en boucle'},
+  iron_ore:     {n:'Minerai',     e:'🔩', bg:'#64748b',c:'#f8fafc',          desc:'Pour forger une Épée de Fer'},
+  forge:        {n:'Forge',       e:'🔨', bg:'#fef3c7',c:'#7c2d12',node:1,  desc:'Fabrique l\'Épée de Fer'},
+  iron_sword:   {n:'Épée de Fer', e:'🗡️', bg:'#e2e8f0',c:'#0f172a',         desc:'2-3× plus rapide que l\'épée normale'},
+  wolf:         {n:'Loup',        e:'🐺', bg:'#374151',c:'#f9fafb',monster:1,aggroMax:15,desc:'Attaque dans 15s'},
+  goblin:       {n:'Gobelin',     e:'👺', bg:'#4c1d95',c:'#f5f3ff',monster:1,aggroMax:12,desc:'Attaque dans 12s. Laisse de l\'Or'},
+  troll:        {n:'Troll',       e:'👹', bg:'#7f1d1d',c:'#fef2f2',monster:1,aggroMax:10,desc:'Attaque dans 10s. Résistant'},
 };
 
 const RECIPES = [
@@ -134,7 +183,7 @@ const RECIPES = [
   {i:['tree','villager'],            o:['wood'],    keep:['tree','villager'],       t:5,  rep:1, d:'Arbre + Villageois → Bois'},
   {i:['rock','villager'],            o:['stone'],   keep:['rock','villager'],       t:6,  rep:1, d:'Rocher + Villageois → Pierre'},
   {i:['farm','villager'],            o:['apple'],   keep:['farm','villager'],       t:7,  rep:1, d:'Ferme + Villageois → Pomme'},
-  {i:['forest_zone','villager'],     o:['wood','berry'], keep:['forest_zone','villager'], t:8, rep:1, d:'Zone Forêt + Villageois → Bois + Baie'},
+  {i:['forest_zone','villager'],     o:['wood','berry'],keep:['forest_zone','villager'],t:8,rep:1,d:'Zone Forêt + Villageois → Bois + Baie'},
   {i:['cave_zone','villager'],       o:['iron_ore'],keep:['cave_zone','villager'],  t:10, rep:1, d:'Grotte + Villageois → Minerai'},
   {i:['flint','wood'],               o:['campfire'],           keep:[],             t:3,  rep:0, d:'Silex + Bois → Feu de camp'},
   {i:['berry','campfire'],           o:['cooked_berry'],       keep:['campfire'],   t:2,  rep:0, d:'Feu + Baie → Baie cuite'},
@@ -147,8 +196,8 @@ const RECIPES = [
   {i:['flint','plank','villager'],                o:['sword'],  keep:['villager'], t:5,  rep:0, d:'Villageois + Planche + Silex → Épée'},
   {i:['plank','plank','villager'],                o:['shield'], keep:['villager'], t:5,  rep:0, d:'2 Planches + Villageois → Bouclier'},
   {i:['stone','stone','stone','plank','villager'], o:['forge'],  keep:['villager'], t:12, rep:0, d:'3 Pierres + Planche + Villageois → Forge'},
-  {i:['forge','iron_ore','iron_ore','villager'],   o:['iron_sword'], keep:['forge','villager'], t:8, rep:0, d:'Forge + 2 Minerais + Villageois → Épée de Fer'},
-  {i:['house','villager','villager'], o:['baby'],  keep:['house','villager','villager'], t:15, rep:0, d:'Maison + 2 Villageois → Bébé'},
+  {i:['forge','iron_ore','iron_ore','villager'],   o:['iron_sword'],keep:['forge','villager'],t:8,rep:0,d:'Forge + 2 Minerais + Villageois → Épée de Fer'},
+  {i:['house','villager','villager'], o:['baby'],  keep:['house','villager','villager'], t:15,rep:0,d:'Maison + 2 Villageois → Bébé'},
   {i:['baby'],                        o:['villager'], keep:[],                     t:10, rep:0, d:'Bébé → Villageois'},
   {i:['sword','wolf'],               o:['bone'],        keep:['sword'],            t:4,  rep:0, d:'⚔️ Épée + Loup → Os'},
   {i:['sword','goblin'],             o:['gold'],        keep:['sword'],            t:6,  rep:0, d:'⚔️ Épée + Gobelin → Or'},
@@ -187,75 +236,60 @@ const WIN_DAY=25, CW=82, CH=104, SO=24;
 let G={};
 
 // ── AUDIO ────────────────────────────────────────────────────────────────────
-const AC = new (window.AudioContext||window.webkitAudioContext)();
+const AC=new(window.AudioContext||window.webkitAudioContext)();
 document.addEventListener('mousedown',()=>{if(AC.state==='suspended')AC.resume();},{passive:true});
-
 function playSound(type){
   if(!AC)return;
   try{
     const t=AC.currentTime;
     if(type==='craft_start'){
-      const o=AC.createOscillator(),g=AC.createGain();
-      o.connect(g);g.connect(AC.destination);
+      const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);
       o.frequency.setValueAtTime(300,t);o.frequency.exponentialRampToValueAtTime(520,t+.12);
-      g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);
-      o.start(t);o.stop(t+.15);
-    } else if(type==='craft_done'){
-      [523,659,784].forEach((f,i)=>{
-        const o=AC.createOscillator(),g=AC.createGain();o.type='sine';
-        o.connect(g);g.connect(AC.destination);
-        o.frequency.setValueAtTime(f,t+i*.09);
+      g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.start(t);o.stop(t+.15);
+    }else if(type==='craft_done'){
+      [523,659,784].forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type='sine';
+        o.connect(g);g.connect(AC.destination);o.frequency.setValueAtTime(f,t+i*.09);
         g.gain.setValueAtTime(.22,t+i*.09);g.gain.exponentialRampToValueAtTime(.001,t+i*.09+.28);
-        o.start(t+i*.09);o.stop(t+i*.09+.3);
-      });
-    } else if(type==='monster_attack'){
-      const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';
-      o.connect(g);g.connect(AC.destination);
+        o.start(t+i*.09);o.stop(t+i*.09+.3);});
+    }else if(type==='monster_attack'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';o.connect(g);g.connect(AC.destination);
       o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(40,t+.35);
-      g.gain.setValueAtTime(.5,t);g.gain.exponentialRampToValueAtTime(.001,t+.35);
-      o.start(t);o.stop(t+.35);
-    } else if(type==='shield_block'){
-      [900,1400,700].forEach((f,i)=>{
-        const o=AC.createOscillator(),g=AC.createGain();o.type='square';
-        o.connect(g);g.connect(AC.destination);
-        o.frequency.setValueAtTime(f,t+i*.025);
+      g.gain.setValueAtTime(.5,t);g.gain.exponentialRampToValueAtTime(.001,t+.35);o.start(t);o.stop(t+.35);
+    }else if(type==='shield_block'){
+      [900,1400,700].forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type='square';
+        o.connect(g);g.connect(AC.destination);o.frequency.setValueAtTime(f,t+i*.025);
         g.gain.setValueAtTime(.12,t+i*.025);g.gain.exponentialRampToValueAtTime(.001,t+i*.025+.22);
-        o.start(t+i*.025);o.stop(t+i*.025+.25);
-      });
-    } else if(type==='buy_pack'){
-      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';
-      o.connect(g);g.connect(AC.destination);
+        o.start(t+i*.025);o.stop(t+i*.025+.25);});
+    }else if(type==='buy_pack'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.connect(g);g.connect(AC.destination);
       o.frequency.setValueAtTime(880,t);o.frequency.setValueAtTime(1100,t+.07);
-      g.gain.setValueAtTime(.28,t);g.gain.exponentialRampToValueAtTime(.001,t+.28);
-      o.start(t);o.stop(t+.3);
-    } else if(type==='wave_start'){
-      for(let i=0;i<3;i++){
-        const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';
-        o.connect(g);g.connect(AC.destination);
-        o.frequency.setValueAtTime(i%2===0?240:190,t+i*.22);
+      g.gain.setValueAtTime(.28,t);g.gain.exponentialRampToValueAtTime(.001,t+.28);o.start(t);o.stop(t+.3);
+    }else if(type==='wave_start'){
+      for(let i=0;i<3;i++){const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';
+        o.connect(g);g.connect(AC.destination);o.frequency.setValueAtTime(i%2===0?240:190,t+i*.22);
         g.gain.setValueAtTime(.32,t+i*.22);g.gain.exponentialRampToValueAtTime(.001,t+i*.22+.2);
-        o.start(t+i*.22);o.stop(t+i*.22+.22);
-      }
-    } else if(type==='error'){
-      const o=AC.createOscillator(),g=AC.createGain();o.type='square';
-      o.connect(g);g.connect(AC.destination);
-      o.frequency.setValueAtTime(110,t);
-      g.gain.setValueAtTime(.13,t);g.gain.exponentialRampToValueAtTime(.001,t+.13);
+        o.start(t+i*.22);o.stop(t+i*.22+.22);}
+    }else if(type==='error'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.connect(g);g.connect(AC.destination);
+      o.frequency.setValueAtTime(110,t);g.gain.setValueAtTime(.13,t);g.gain.exponentialRampToValueAtTime(.001,t+.13);
       o.start(t);o.stop(t+.14);
-    } else if(type==='sell'){
-      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';
-      o.connect(g);g.connect(AC.destination);
+    }else if(type==='sell'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.connect(g);g.connect(AC.destination);
       o.frequency.setValueAtTime(440,t);o.frequency.exponentialRampToValueAtTime(330,t+.12);
-      g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);
-      o.start(t);o.stop(t+.15);
-    } else if(type==='victory'){
-      [523,659,784,1047].forEach((f,i)=>{
-        const o=AC.createOscillator(),g=AC.createGain();
-        o.connect(g);g.connect(AC.destination);
-        o.frequency.setValueAtTime(f,t+i*.1);
+      g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.start(t);o.stop(t+.15);
+    }else if(type==='save'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.connect(g);g.connect(AC.destination);
+      o.frequency.setValueAtTime(440,t);o.frequency.setValueAtTime(554,t+.06);o.frequency.setValueAtTime(660,t+.12);
+      g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.start(t);o.stop(t+.25);
+    }else if(type==='victory'){
+      [523,659,784,1047].forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();
+        o.connect(g);g.connect(AC.destination);o.frequency.setValueAtTime(f,t+i*.1);
         g.gain.setValueAtTime(.28,t+i*.1);g.gain.exponentialRampToValueAtTime(.001,t+i*.1+.4);
-        o.start(t+i*.1);o.stop(t+i*.1+.45);
-      });
+        o.start(t+i*.1);o.stop(t+i*.1+.45);});
+    }else if(type==='menu_click'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.connect(g);g.connect(AC.destination);
+      o.frequency.setValueAtTime(660,t);g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.1);
+      o.start(t);o.stop(t+.1);
     }
   }catch(e){}
 }
@@ -263,39 +297,75 @@ function playSound(type){
 // ── TOOLTIP ───────────────────────────────────────────────────────────────────
 const ttEl=document.getElementById('tooltip');
 function showTooltip(e,type){
-  if(G.drag)return;
-  const d=CD[type]; if(!d)return;
+  if(G.drag)return;const d=CD[type];if(!d)return;
   ttEl.querySelector('.tt-name').textContent=d.e+' '+d.n;
   ttEl.querySelector('.tt-desc').textContent=d.desc||'';
   const uses=RECIPES.filter(r=>r.i.includes(type));
   if(uses.length>0){
     ttEl.querySelector('.tt-label').textContent='Recettes :';
     ttEl.querySelector('.tt-r').innerHTML=uses.slice(0,4).map(r=>
-      r.i.map(t=>CD[t]?.e||t).join('+')+' → '+r.o.map(t=>CD[t]?.e||t).join(',')+' <span style="color:#888">('+r.t+'s'+(r.rep?' 🔄':'')+')</span>'
+      r.i.map(t=>CD[t]?.e||t).join('+')+' → '+r.o.map(t=>CD[t]?.e||t).join(',')+'<span style="color:#888"> ('+r.t+'s'+(r.rep?' 🔄':'')+')</span>'
     ).join('<br>');
-  } else {
-    ttEl.querySelector('.tt-label').textContent='';
-    ttEl.querySelector('.tt-r').textContent='';
-  }
-  ttEl.style.display='block';
-  posTooltip(e);
+  }else{ttEl.querySelector('.tt-label').textContent='';ttEl.querySelector('.tt-r').textContent='';}
+  ttEl.style.display='block';posTooltip(e);
 }
 function posTooltip(e){
-  const x=e.clientX+16, y=e.clientY-10;
-  ttEl.style.left=Math.min(x,window.innerWidth-220)+'px';
-  ttEl.style.top=Math.max(8,y)+'px';
+  ttEl.style.left=Math.min(e.clientX+16,window.innerWidth-220)+'px';
+  ttEl.style.top=Math.max(8,e.clientY-10)+'px';
 }
 function hideTooltip(){ttEl.style.display='none';}
 document.addEventListener('mousemove',e=>{if(ttEl.style.display!=='none')posTooltip(e);});
 
+// ── SAVE / LOAD ───────────────────────────────────────────────────────────────
+function saveGame(){
+  if(!G||!G.cards)return;
+  const data={
+    gold:G.gold, moon:G.moon, moonProg:G.moonProg, moonDur:G.moonDur, nid:G.nid,
+    cards:Object.fromEntries(Object.entries(G.cards).map(([id,c])=>[id,{id:c.id,type:c.type,x:c.x,y:c.y,sid:c.sid,aggro:c.aggro||0}])),
+    stacks:Object.fromEntries(Object.entries(G.stacks).map(([sid,s])=>[sid,{id:s.id,ids:[...s.ids],rx:s.rx,ry:s.ry}]))
+  };
+  localStorage.setItem('stacklands_save',JSON.stringify(data));
+}
+function hasSave(){return!!localStorage.getItem('stacklands_save');}
+function clearSave(){localStorage.removeItem('stacklands_save');}
+
+function loadGame(){
+  const raw=localStorage.getItem('stacklands_save');
+  if(!raw)return false;
+  const data=JSON.parse(raw);
+  G={gold:data.gold,moon:data.moon,moonProg:data.moonProg,moonDur:data.moonDur,nid:data.nid,
+     cards:{},stacks:{},drag:null,ts:null,over:false,paused:false};
+  document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
+  document.getElementById('log').innerHTML='';
+  ['overlay','victory','pause','main-menu'].forEach(id=>document.getElementById(id).style.display='none');
+  buildShop();
+  // Cartes
+  Object.values(data.cards).forEach(c=>{
+    G.cards[c.id]={id:c.id,type:c.type,x:c.x,y:c.y,sid:null,aggro:c.aggro||0};
+    createCardDOM(c.id,c.type);
+  });
+  // Piles
+  Object.values(data.stacks).forEach(s=>{
+    G.stacks[s.id]={id:s.id,ids:[...s.ids],rx:s.rx,ry:s.ry,recipe:null,prog:0};
+    s.ids.forEach(cid=>{if(G.cards[cid])G.cards[cid].sid=s.id;});
+    updateSV(s.id); checkRecipe(s.id);
+  });
+  // Débloquer paquets
+  Object.entries(PACKS).forEach(([k,p])=>{
+    if(p.unlock>0&&G.moon>=p.unlock){const b=document.getElementById('b-'+k);if(b)b.style.display='block';}
+  });
+  updateHUD();
+  log('💾 Partie chargée — Jour '+G.moon);
+  requestAnimationFrame(loop);
+  return true;
+}
+
 // ── SHOP ─────────────────────────────────────────────────────────────────────
 function buildShop(){
-  const el=document.getElementById('shop');
-  el.innerHTML='';
+  const el=document.getElementById('shop');el.innerHTML='';
   for(const [key,p] of Object.entries(PACKS)){
     const btn=document.createElement('button');
-    btn.className='pbtn'; btn.id='b-'+key;
-    btn.onclick=()=>buyPack(key);
+    btn.className='pbtn';btn.id='b-'+key;btn.onclick=()=>buyPack(key);
     btn.innerHTML=p.n+' — '+p.cost+'🪙<small>'+p.hint+'</small>';
     btn.style.display=(p.unlock>0)?'none':'block';
     el.appendChild(btn);
@@ -307,10 +377,10 @@ function initG(){
   G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false};
   document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
   document.getElementById('log').innerHTML='';
-  ['overlay','victory','pause'].forEach(id=>document.getElementById(id).style.display='none');
+  ['overlay','victory','pause','main-menu'].forEach(id=>document.getElementById(id).style.display='none');
   buildShop();
-  spawn('berry_bush',70,70); spawn('tree',200,70); spawn('villager',330,70);
-  spawn('berry',460,70);     spawn('berry',460,180); spawn('flint',330,180);
+  spawn('berry_bush',70,70);spawn('tree',200,70);spawn('villager',330,70);
+  spawn('berry',460,70);spawn('berry',460,180);spawn('flint',330,180);
   updateHUD();
   log('🌅 Empile les cartes pour crafter !');
   log('⚔️ Première vague de monstres au Jour 5 !');
@@ -318,19 +388,22 @@ function initG(){
 }
 
 // ── CARDS ────────────────────────────────────────────────────────────────────
-function spawn(type,x,y){
-  const id=G.nid++; const d=CD[type];
-  G.cards[id]={id,type,x,y,sid:null,aggro:0};
+function createCardDOM(id,type){
+  const d=CD[type];
   const el=document.createElement('div');
-  el.className='card'+(d.monster?' monster':'');
-  el.id='c'+id;
-  el.style.cssText=`left:${x}px;top:${y}px;background:${d.bg};color:${d.c};z-index:10;`;
+  el.className='card'+(d.monster?' monster':'');el.id='c'+id;
+  el.style.cssText=`left:${G.cards[id].x}px;top:${G.cards[id].y}px;background:${d.bg};color:${d.c};z-index:10;`;
   el.innerHTML=`<div class="card-emoji">${d.e}</div><div class="card-name">${d.n}</div><div class="card-bar"><div class="card-bar-fill"></div></div>`;
   el.addEventListener('mousedown',e=>{e.preventDefault();startDrag(e,id);});
   el.addEventListener('contextmenu',e=>{e.preventDefault();sellCard(id);});
   el.addEventListener('mouseenter',e=>showTooltip(e,type));
   el.addEventListener('mouseleave',hideTooltip);
   document.getElementById('table').appendChild(el);
+}
+function spawn(type,x,y){
+  const id=G.nid++;
+  G.cards[id]={id,type,x,y,sid:null,aggro:0};
+  createCardDOM(id,type);
   return id;
 }
 function cel(id){return document.getElementById('c'+id);}
@@ -338,46 +411,43 @@ function delCard(id){const e=cel(id);if(e)e.remove();delete G.cards[id];}
 
 // ── STACKS ───────────────────────────────────────────────────────────────────
 function mkStack(ids){
-  const sid=G.nid++;
-  const root=G.cards[ids[0]];
+  const sid=G.nid++;const root=G.cards[ids[0]];
   G.stacks[sid]={id:sid,ids:[...ids],rx:root.x,ry:root.y,recipe:null,prog:0};
   ids.forEach(id=>{G.cards[id].sid=sid;});
-  updateSV(sid); checkRecipe(sid); return sid;
+  updateSV(sid);checkRecipe(sid);return sid;
 }
 function dissolve(sid){
-  const s=G.stacks[sid]; if(!s)return;
+  const s=G.stacks[sid];if(!s)return;
   s.ids.forEach(id=>{if(G.cards[id])G.cards[id].sid=null;});
   delete G.stacks[sid];
 }
 function addToStack(sid,cid){
-  rmFromStack(cid);
-  const s=G.stacks[sid]; s.ids.push(cid); G.cards[cid].sid=sid;
-  s.recipe=null; s.prog=0; updateSV(sid); checkRecipe(sid);
+  rmFromStack(cid);const s=G.stacks[sid];s.ids.push(cid);G.cards[cid].sid=sid;
+  s.recipe=null;s.prog=0;updateSV(sid);checkRecipe(sid);
 }
 function rmFromStack(cid){
-  const c=G.cards[cid]; if(!c||!c.sid)return;
-  const s=G.stacks[c.sid]; if(!s){c.sid=null;return;}
-  s.ids=s.ids.filter(i=>i!==cid); c.sid=null; s.recipe=null; s.prog=0;
+  const c=G.cards[cid];if(!c||!c.sid)return;
+  const s=G.stacks[c.sid];if(!s){c.sid=null;return;}
+  s.ids=s.ids.filter(i=>i!==cid);c.sid=null;s.recipe=null;s.prog=0;
   if(s.ids.length===0){dissolve(s.id);}
   else if(s.ids.length===1){
-    const last=s.ids[0];
-    G.cards[last].x=s.rx; G.cards[last].y=s.ry;
-    G.cards[last].sid=null; dissolve(s.id); updateCV(last);
-  } else {updateSV(s.id); checkRecipe(s.id);}
+    const last=s.ids[0];G.cards[last].x=s.rx;G.cards[last].y=s.ry;
+    G.cards[last].sid=null;dissolve(s.id);updateCV(last);
+  }else{updateSV(s.id);checkRecipe(s.id);}
 }
 function updateSV(sid){
-  const s=G.stacks[sid]; if(!s)return;
+  const s=G.stacks[sid];if(!s)return;
   s.ids.forEach((cid,i)=>{
-    const el=cel(cid); if(!el)return;
-    el.style.left=s.rx+'px'; el.style.top=(s.ry+i*SO)+'px'; el.style.zIndex=10+i;
-    G.cards[cid].x=s.rx; G.cards[cid].y=s.ry+i*SO;
+    const el=cel(cid);if(!el)return;
+    el.style.left=s.rx+'px';el.style.top=(s.ry+i*SO)+'px';el.style.zIndex=10+i;
+    G.cards[cid].x=s.rx;G.cards[cid].y=s.ry+i*SO;
     const bar=el.querySelector('.card-bar');
     if(bar)bar.style.display=(i===0&&s.recipe)?'block':'none';
   });
 }
 function updateCV(id){
-  const c=G.cards[id],el=cel(id); if(!el||!c)return;
-  el.style.left=c.x+'px'; el.style.top=c.y+'px';
+  const c=G.cards[id],el=cel(id);if(!el||!c)return;
+  el.style.left=c.x+'px';el.style.top=c.y+'px';
   el.querySelector('.card-bar').style.display='none';
 }
 
@@ -385,28 +455,21 @@ function updateCV(id){
 function sortedTypes(ids){return ids.map(i=>G.cards[i].type).sort();}
 function arrEq(a,b){return a.length===b.length&&a.every((v,i)=>v===b[i]);}
 function checkRecipe(sid){
-  const s=G.stacks[sid]; if(!s)return;
+  const s=G.stacks[sid];if(!s)return;
   const types=sortedTypes(s.ids);
   for(const r of RECIPES){
-    if(arrEq(types,[...r.i].sort())){
-      if(!s.recipe)playSound('craft_start');
-      s.recipe=r; s.prog=0; updateSV(sid); return;
-    }
+    if(arrEq(types,[...r.i].sort())){if(!s.recipe)playSound('craft_start');s.recipe=r;s.prog=0;updateSV(sid);return;}
   }
-  s.recipe=null; updateSV(sid);
+  s.recipe=null;updateSV(sid);
 }
 function execRecipe(sid){
-  const s=G.stacks[sid]; if(!s||!s.recipe)return;
-  const r=s.recipe, rx=s.rx, ry=s.ry;
-  const keepQ=[...r.keep], kept=[], gone=[];
-  s.ids.forEach(cid=>{
-    const t=G.cards[cid].type, ki=keepQ.indexOf(t);
-    if(ki!==-1){kept.push(cid);keepQ.splice(ki,1);}
-    else gone.push(cid);
-  });
+  const s=G.stacks[sid];if(!s||!s.recipe)return;
+  const r=s.recipe,rx=s.rx,ry=s.ry;
+  const keepQ=[...r.keep],kept=[],gone=[];
+  s.ids.forEach(cid=>{const t=G.cards[cid].type,ki=keepQ.indexOf(t);
+    if(ki!==-1){kept.push(cid);keepQ.splice(ki,1);}else gone.push(cid);});
   kept.forEach(cid=>{G.cards[cid].sid=null;});
-  dissolve(sid);
-  gone.forEach(cid=>delCard(cid));
+  dissolve(sid);gone.forEach(cid=>delCard(cid));
   const stackH=kept.length*SO+CH;
   r.o.forEach((type,i)=>{spawn(type,rx+(i%3)*(CW+8),ry+stackH+16+Math.floor(i/3)*(CH+8));});
   if(kept.length>0){
@@ -420,30 +483,26 @@ function execRecipe(sid){
 
 // ── DRAG ─────────────────────────────────────────────────────────────────────
 function startDrag(e,id){
-  if(G.over||G.paused)return;
-  hideTooltip();
-  const c=G.cards[id],el=cel(id); if(!el)return;
-  const tr=document.getElementById('table').getBoundingClientRect();
-  const er=el.getBoundingClientRect();
+  if(G.over||G.paused)return;hideTooltip();
+  const c=G.cards[id],el=cel(id);if(!el)return;
+  const tr=document.getElementById('table').getBoundingClientRect(),er=el.getBoundingClientRect();
   if(c.sid)rmFromStack(id);
   G.drag={id,ox:e.clientX-er.left,oy:e.clientY-er.top,tl:tr.left,tt:tr.top};
-  el.classList.add('dragging'); el.style.zIndex=9999;
+  el.classList.add('dragging');el.style.zIndex=9999;
 }
 document.addEventListener('mousemove',e=>{
   if(!G.drag)return;
-  const c=G.cards[G.drag.id],el=cel(G.drag.id); if(!c||!el)return;
-  c.x=e.clientX-G.drag.tl-G.drag.ox; c.y=e.clientY-G.drag.tt-G.drag.oy;
-  el.style.left=c.x+'px'; el.style.top=c.y+'px';
+  const c=G.cards[G.drag.id],el=cel(G.drag.id);if(!c||!el)return;
+  c.x=e.clientX-G.drag.tl-G.drag.ox;c.y=e.clientY-G.drag.tt-G.drag.oy;
+  el.style.left=c.x+'px';el.style.top=c.y+'px';
 });
 document.addEventListener('mouseup',()=>{
   if(!G.drag)return;
-  const id=G.drag.id; G.drag=null;
-  const el=cel(id); if(el){el.classList.remove('dragging');el.style.zIndex=10;}
+  const id=G.drag.id;G.drag=null;
+  const el=cel(id);if(el){el.classList.remove('dragging');el.style.zIndex=10;}
   const tgt=findTarget(id);
   if(tgt){
-    if(tgt.sid)addToStack(tgt.sid,id);
-    else mkStack([tgt.id,id]);
-    // Shake + error sound si pas de recette
+    if(tgt.sid)addToStack(tgt.sid,id);else mkStack([tgt.id,id]);
     const sid=G.cards[id]?.sid;
     if(sid&&!G.stacks[sid]?.recipe){
       playSound('error');
@@ -456,7 +515,7 @@ document.addEventListener('mouseup',()=>{
 function findTarget(dragId){
   const dc=G.cards[dragId];
   for(const [idStr,c] of Object.entries(G.cards)){
-    const id=parseInt(idStr); if(id===dragId)continue;
+    const id=parseInt(idStr);if(id===dragId)continue;
     const ox=Math.min(dc.x+CW,c.x+CW)-Math.max(dc.x,c.x);
     const oy=Math.min(dc.y+CH,c.y+CH)-Math.max(dc.y,c.y);
     if(ox>22&&oy>22){
@@ -470,60 +529,46 @@ function findTarget(dragId){
 // ── SELL ─────────────────────────────────────────────────────────────────────
 function sellCard(id){
   if(G.over||G.paused||!G.cards[id])return;
-  const t=G.cards[id].type;
-  if(CD[t].node||CD[t].monster)return;
+  const t=G.cards[id].type;if(CD[t].node||CD[t].monster)return;
   if(G.cards[id].sid)rmFromStack(id);
-  delCard(id); G.gold+=1; playSound('sell'); log('💰 +1🪙 (vente)'); updateHUD();
+  delCard(id);G.gold+=1;playSound('sell');log('💰 +1🪙 (vente)');updateHUD();
 }
 
 // ── COMBAT ───────────────────────────────────────────────────────────────────
 function monsterAttack(mid){
-  const c=G.cards[mid]; if(!c)return;
+  const c=G.cards[mid];if(!c)return;
   const mName=CD[c.type].n;
-  if(c.sid)rmFromStack(mid);
-  delCard(mid);
+  if(c.sid)rmFromStack(mid);delCard(mid);
   const shields=Object.values(G.cards).filter(c=>c.type==='shield');
   if(shields.length>0){
-    const sh=shields[0];
-    if(sh.sid)rmFromStack(sh.id);
-    delCard(sh.id);
-    playSound('shield_block');
-    log('🛡️ Le bouclier a protégé un villageois contre le '+mName+' !');
-    updateHUD(); return;
+    const sh=shields[0];if(sh.sid)rmFromStack(sh.id);delCard(sh.id);
+    playSound('shield_block');log('🛡️ Bouclier : '+mName+' bloqué !');updateHUD();return;
   }
   playSound('monster_attack');
   const villagers=Object.values(G.cards).filter(c=>c.type==='villager');
   if(villagers.length>0){
-    const v=villagers[0];
-    if(v.sid)rmFromStack(v.id);
-    delCard(v.id);
+    const v=villagers[0];if(v.sid)rmFromStack(v.id);delCard(v.id);
     log('💀 Le '+mName+' a tué un villageois !');
     if(countT('villager')+countT('baby')===0){G.over=true;showOverMonster();return;}
-  } else {
-    log('💀 Le '+mName+' ravage le village !');
-    G.over=true; showOverMonster(); return;
-  }
+  }else{log('💀 Le '+mName+' ravage le village !');G.over=true;showOverMonster();return;}
   updateHUD();
 }
 
 function spawnWave(){
   const waveNum=Math.floor(G.moon/5);
   let monsters;
-  if(waveNum===1)      monsters=['wolf'];
-  else if(waveNum===2) monsters=['wolf','wolf'];
-  else if(waveNum===3) monsters=['wolf','goblin'];
-  else if(waveNum===4) monsters=['goblin','goblin'];
-  else if(waveNum===5) monsters=['goblin','goblin','troll'];
-  else                 monsters=['troll',...Array(Math.min(waveNum-3,4)).fill('goblin')];
+  if(waveNum===1)monsters=['wolf'];
+  else if(waveNum===2)monsters=['wolf','wolf'];
+  else if(waveNum===3)monsters=['wolf','goblin'];
+  else if(waveNum===4)monsters=['goblin','goblin'];
+  else if(waveNum===5)monsters=['goblin','goblin','troll'];
+  else monsters=['troll',...Array(Math.min(waveNum-3,4)).fill('goblin')];
   const tbl=document.getElementById('table').getBoundingClientRect();
-  monsters.forEach(type=>{
-    spawn(type,40+Math.random()*(tbl.width-180),40+Math.random()*(tbl.height-180));
-  });
+  monsters.forEach(type=>{spawn(type,40+Math.random()*(tbl.width-180),40+Math.random()*(tbl.height-180));});
   playSound('wave_start');
   const el=document.getElementById('wave-alert');
   el.textContent='⚔️ Vague '+waveNum+' ! '+monsters.map(t=>CD[t].e+' '+CD[t].n).join(', ')+' !';
-  el.style.display='block';
-  setTimeout(()=>el.style.display='none',3500);
+  el.style.display='block';setTimeout(()=>el.style.display='none',3500);
   log('⚔️ Vague '+waveNum+' ! Empile une Épée sur les monstres !');
 }
 
@@ -531,47 +576,36 @@ function spawnWave(){
 function loop(ts){
   if(G.over||G.paused)return;
   if(!G.ts)G.ts=ts;
-  const dt=(ts-G.ts)/1000; G.ts=ts;
-
+  const dt=(ts-G.ts)/1000;G.ts=ts;
   G.moonProg+=dt/G.moonDur;
   if(G.moonProg>=1){G.moonProg=0;G.moon++;endMoon();if(G.over)return;}
   document.getElementById('moon-fill').style.width=(G.moonProg*100)+'%';
-
   const toExec=[];
   for(const [sidStr,s] of Object.entries(G.stacks)){
-    if(!s.recipe)continue;
-    s.prog+=dt/s.recipe.t;
+    if(!s.recipe)continue;s.prog+=dt/s.recipe.t;
     const fill=cel(s.ids[0])?.querySelector('.card-bar-fill');
     if(fill){fill.style.background='#4ade80';fill.style.width=(Math.min(s.prog,1)*100)+'%';}
     if(s.prog>=1){s.prog=0;toExec.push(parseInt(sidStr));}
   }
   toExec.forEach(sid=>{if(G.stacks[sid])execRecipe(sid);});
-
   const toAttack=[];
   for(const [idStr,c] of Object.entries(G.cards)){
-    const id=parseInt(idStr), d=CD[c.type];
-    if(!d||!d.monster)continue;
+    const id=parseInt(idStr),d=CD[c.type];if(!d||!d.monster)continue;
     const inCombat=c.sid&&G.stacks[c.sid]?.recipe;
     const el=cel(id);
     if(!inCombat){
-      c.aggro=(c.aggro||0)+dt;
-      const pct=c.aggro/d.aggroMax;
+      c.aggro=(c.aggro||0)+dt;const pct=c.aggro/d.aggroMax;
       if(el){
-        const bar=el.querySelector('.card-bar'), fill=el.querySelector('.card-bar-fill');
+        const bar=el.querySelector('.card-bar'),fill=el.querySelector('.card-bar-fill');
         if(bar)bar.style.display='block';
         if(fill){fill.style.background='#ef4444';fill.style.width=Math.min(pct*100,100)+'%';}
-        // Pulse quand > 70%
-        if(pct>=.7)el.classList.add('danger-pulse');
-        else el.classList.remove('danger-pulse');
+        if(pct>=.7)el.classList.add('danger-pulse');else el.classList.remove('danger-pulse');
       }
       if(c.aggro>=d.aggroMax)toAttack.push(id);
-    } else {
-      if(el)el.classList.remove('danger-pulse');
-    }
+    }else{if(el)el.classList.remove('danger-pulse');}
   }
   toAttack.forEach(id=>{if(G.cards[id])monsterAttack(id);});
   if(G.over)return;
-
   requestAnimationFrame(loop);
 }
 
@@ -580,35 +614,28 @@ function endMoon(){
   if(G.moon>WIN_DAY){G.over=true;showVictory();return;}
   const pop=countT('villager')+countT('baby');
   if(pop>0){
-    const fCards=Object.values(G.cards)
-      .filter(c=>CD[c.type]?.food)
-      .sort((a,b)=>(CD[b.type].food||0)-(CD[a.type].food||0));
+    const fCards=Object.values(G.cards).filter(c=>CD[c.type]?.food).sort((a,b)=>(CD[b.type].food||0)-(CD[a.type].food||0));
     const total=fCards.reduce((s,c)=>s+(CD[c.type].food||0),0);
     if(total<pop){G.over=true;showOverFamine();return;}
     let need=pop;
-    for(const fc of fCards){
-      if(need<=0)break;
-      if(fc.sid)rmFromStack(fc.id);
-      delCard(fc.id); need-=CD[fc.type].food;
-    }
+    for(const fc of fCards){if(need<=0)break;if(fc.sid)rmFromStack(fc.id);delCard(fc.id);need-=CD[fc.type].food;}
     log('🌙 Jour '+G.moon+' — '+pop+' villageois nourris !');
-  } else {
-    log('🌙 Jour '+G.moon);
-  }
+  }else{log('🌙 Jour '+G.moon);}
   if(G.moon%5===0)spawnWave();
   Object.entries(PACKS).forEach(([k,p])=>{
-    if(p.unlock>0&&G.moon>=p.unlock){
-      const b=document.getElementById('b-'+k);
-      if(b)b.style.display='block';
-    }
+    if(p.unlock>0&&G.moon>=p.unlock){const b=document.getElementById('b-'+k);if(b)b.style.display='block';}
   });
+  // Auto-save
+  saveGame();
+  const badge=document.getElementById('save-badge');
+  badge.style.opacity='1';setTimeout(()=>badge.style.opacity='0',1500);
   updateHUD();
 }
 function countT(t){return Object.values(G.cards).filter(c=>c.type===t).length;}
 
 // ── PACKS ────────────────────────────────────────────────────────────────────
 function buyPack(key){
-  const p=PACKS[key]; if(!p||G.gold<p.cost)return;
+  const p=PACKS[key];if(!p||G.gold<p.cost)return;
   G.gold-=p.cost;
   const tbl=document.getElementById('table').getBoundingClientRect();
   const cx=tbl.width/2,cy=tbl.height/2;
@@ -616,14 +643,11 @@ function buyPack(key){
     const type=wRand(p.pool);
     spawn(type,Math.max(4,cx+(Math.random()-.5)*220-CW/2),Math.max(4,cy+(Math.random()-.5)*160-CH/2));
   }
-  playSound('buy_pack');
-  log('📦 Ouvert : '+p.n); updateHUD();
+  playSound('buy_pack');log('📦 Ouvert : '+p.n);updateHUD();
 }
 function wRand(pool){
-  const tot=pool.reduce((s,e)=>s+e.w,0);
-  let r=Math.random()*tot;
-  for(const e of pool){r-=e.w;if(r<=0)return e.t;}
-  return pool[pool.length-1].t;
+  const tot=pool.reduce((s,e)=>s+e.w,0);let r=Math.random()*tot;
+  for(const e of pool){r-=e.w;if(r<=0)return e.t;}return pool[pool.length-1].t;
 }
 
 // ── HUD ───────────────────────────────────────────────────────────────────────
@@ -637,17 +661,13 @@ function updateHUD(){
   document.getElementById('hfood-wrap').style.color=food>=pop?'#86efac':'#fca5a5';
   const nextWave=G.moon%5===0?G.moon+5:Math.ceil(G.moon/5)*5;
   document.getElementById('obj').textContent='⚔️ Vague J'+Math.min(nextWave,WIN_DAY)+' | 🎯 Objectif : J'+WIN_DAY;
-  Object.keys(PACKS).forEach(k=>{
-    const b=document.getElementById('b-'+k);
-    if(b)b.disabled=G.gold<PACKS[k].cost;
-  });
+  Object.keys(PACKS).forEach(k=>{const b=document.getElementById('b-'+k);if(b)b.disabled=G.gold<PACKS[k].cost;});
 }
 
 // ── LOG ───────────────────────────────────────────────────────────────────────
 function log(msg){
-  const d=document.getElementById('log'), el=document.createElement('div');
-  el.className='litem'; el.textContent=msg;
-  d.appendChild(el); setTimeout(()=>el.remove(),5000);
+  const d=document.getElementById('log'),el=document.createElement('div');
+  el.className='litem';el.textContent=msg;d.appendChild(el);setTimeout(()=>el.remove(),5000);
 }
 
 // ── OVERLAYS ──────────────────────────────────────────────────────────────────
@@ -668,35 +688,69 @@ function showVictory(){
   document.getElementById('vscore').textContent='Tu as repoussé toutes les vagues et survécu '+WIN_DAY+' jours !';
   document.getElementById('victory').style.display='flex';
 }
-function restart(){
+
+// ── MENU PRINCIPAL ────────────────────────────────────────────────────────────
+function showMainMenu(){
   ['overlay','victory','pause'].forEach(id=>document.getElementById(id).style.display='none');
+  const hasS=hasSave();
+  const btn=document.getElementById('btn-resume');
+  btn.disabled=!hasS;
+  const info=document.getElementById('resume-info');
+  if(hasS){
+    try{const d=JSON.parse(localStorage.getItem('stacklands_save'));
+      info.textContent='Partie sauvegardée — Jour '+d.moon+' / '+WIN_DAY;}
+    catch(e){info.textContent='';}
+  }else{info.textContent='Aucune sauvegarde';}
+  document.getElementById('main-menu').style.display='flex';
+}
+function startNewGame(){
+  playSound('menu_click');
+  clearSave();
   initG();
+}
+function resumeGame(){
+  playSound('menu_click');
+  if(!loadGame())startNewGame();
+}
+function goMainMenu(){
+  if(G&&!G.over)saveGame();
+  G={over:true,paused:false,cards:{},stacks:{}};
+  document.getElementById('pause').style.display='none';
+  showMainMenu();
+}
+function manualSave(){
+  saveGame();playSound('save');
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;z-index:99999;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.4);';
+  t.textContent='💾 Sauvegarde effectuée !';document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2000);
+}
+function disconnect(){
+  playSound('menu_click');
+  if(G&&G.cards&&Object.keys(G.cards).length>0&&!G.over)try{saveGame();}catch(e){}
+  document.body.style.transition='opacity .6s';document.body.style.opacity='0';
+  setTimeout(()=>{
+    document.body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#071407;color:#d1fae5;font-family:Segoe UI,sans-serif;gap:20px;"><div style="font-size:72px">👋</div><div style="font-size:28px;font-weight:700;">À bientôt !</div><div style="font-size:14px;color:#4ade80;">Ta partie a été sauvegardée.</div></div>';
+    document.body.style.opacity='1';
+  },600);
 }
 
 // ── PAUSE ─────────────────────────────────────────────────────────────────────
 function togglePause(){
-  if(G.over)return;
-  G.paused=!G.paused;
+  if(G.over)return;G.paused=!G.paused;
   const po=document.getElementById('pause');
   if(G.paused){
     const nextWave=G.moon%5===0?G.moon+5:Math.ceil(G.moon/5)*5;
-    document.getElementById('pause-info').textContent=
-      'Jour '+G.moon+' / '+WIN_DAY+' — Prochaine vague : Jour '+Math.min(nextWave,WIN_DAY);
+    document.getElementById('pause-info').textContent='Jour '+G.moon+' / '+WIN_DAY+' — Prochaine vague : Jour '+Math.min(nextWave,WIN_DAY);
     po.style.display='flex';
-  } else {
-    po.style.display='none';
-    G.ts=null;
-    requestAnimationFrame(loop);
-  }
+  }else{po.style.display='none';G.ts=null;requestAnimationFrame(loop);}
 }
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'&&!G.over)togglePause();
-});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&G&&!G.over)togglePause();});
 
 // ── RECIPE BOOK ───────────────────────────────────────────────────────────────
 function showRB(){
   document.getElementById('rlist').innerHTML=RECIPES.map(r=>`
-    <div class="rrow">
+    <div style="font-size:13px;padding:6px 0;border-bottom:1px solid #1e3a1e;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <span>${r.i.map(t=>CD[t]?.e+'&nbsp;'+CD[t]?.n).join(' + ')}</span>
       <span>→</span>
       <span>${r.o.map(t=>CD[t]?.e+'&nbsp;'+CD[t]?.n).join(', ')}</span>
@@ -707,7 +761,7 @@ function showRB(){
 function closeRB(){document.getElementById('rb').style.display='none';}
 
 // ── START ─────────────────────────────────────────────────────────────────────
-initG();
+showMainMenu();
 </script>
 </body>
 </html>
