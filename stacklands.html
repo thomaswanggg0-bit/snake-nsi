@@ -20,9 +20,22 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 .card-name{font-size:10px;font-weight:700;text-align:center;padding:0 4px;line-height:1.2;pointer-events:none;}
 .card-bar{position:absolute;bottom:0;left:0;right:0;height:5px;background:rgba(0,0,0,0.2);border-radius:0 0 7px 7px;overflow:hidden;display:none;}
 .card-bar-fill{height:100%;background:#4ade80;width:0%;}
+/* Shake quand pas de recette */
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake .35s ease;}
+/* Monstre qui pulse quand danger > 70% */
+@keyframes pulse-danger{0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,.8),0 3px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 0 5px rgba(239,68,68,1),0 0 16px rgba(239,68,68,.7)}}
+.danger-pulse{animation:pulse-danger .55s infinite;}
+/* Tooltip */
+#tooltip{position:fixed;background:rgba(10,20,10,.96);color:#fff;padding:9px 12px;border-radius:9px;font-size:12px;pointer-events:none;z-index:99999;max-width:210px;display:none;border:1px solid #2d5a2d;box-shadow:0 4px 12px rgba(0,0,0,.5);}
+#tooltip .tt-name{font-weight:700;font-size:14px;margin-bottom:3px;}
+#tooltip .tt-desc{color:#9ca;margin-bottom:5px;font-size:11px;}
+#tooltip .tt-r{color:#f7d060;font-size:11px;line-height:1.6;}
+#tooltip .tt-label{color:#6b8;font-size:10px;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px;}
 #shop{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:7px;z-index:100;}
-.pbtn{background:#c0392b;color:#fff;border:none;border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 8px rgba(0,0,0,0.4);}
+.pbtn{background:#c0392b;color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 8px rgba(0,0,0,0.4);line-height:1.3;text-align:left;}
 .pbtn:hover{background:#a93226;}.pbtn:disabled{background:#555;cursor:not-allowed;}
+.pbtn small{display:block;font-size:10px;font-weight:400;opacity:.75;margin-top:1px;}
 #log{position:absolute;bottom:12px;left:12px;z-index:100;max-width:240px;}
 .litem{background:rgba(0,0,0,.75);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;margin-bottom:4px;animation:fi .3s ease;}
 @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -50,14 +63,9 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <span style="color:#666;font-size:11px;">Clic-droit=vendre | Échap=Pause</span>
 </div>
 <div id="table"><div id="wave-alert"></div></div>
-<div id="shop">
-  <button class="pbtn" id="b-starter" onclick="buyPack('starter')">📦 Paquet de base — 3🪙</button>
-  <button class="pbtn" id="b-forest"  onclick="buyPack('forest')">🌲 Paquet Forêt — 5🪙</button>
-  <button class="pbtn" id="b-adv"     onclick="buyPack('adv')">🏗️ Paquet Avancé — 8🪙</button>
-  <button class="pbtn" id="b-combat"  onclick="buyPack('combat')" style="display:none;">⚔️ Paquet Combat — 6🪙</button>
-  <button class="pbtn" id="b-explor"  onclick="buyPack('explor')" style="display:none;">🌿 Paquet Exploration — 7🪙</button>
-</div>
+<div id="shop"></div>
 <div id="log"></div>
+<div id="tooltip"><div class="tt-name"></div><div class="tt-desc"></div><div class="tt-label"></div><div class="tt-r"></div></div>
 
 <div class="overlay" id="overlay">
   <h2 id="over-title">☠️ Défaite !</h2>
@@ -88,36 +96,37 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 </div>
 
 <script>
+// ── DEFINITIONS ───────────────────────────────────────────────────────────────
 const CD = {
-  berry_bush:   {n:'Buisson',     e:'🫐', bg:'#bbf7d0',c:'#14532d',node:1},
-  tree:         {n:'Arbre',       e:'🌳', bg:'#dcfce7',c:'#14532d',node:1},
-  rock:         {n:'Rocher',      e:'🪨', bg:'#e2e8f0',c:'#334155',node:1},
-  berry:        {n:'Baie',        e:'🫐', bg:'#f3e8ff',c:'#6b21a8',food:1},
-  wood:         {n:'Bois',        e:'🪵', bg:'#fef3c7',c:'#92400e'},
-  stone:        {n:'Pierre',      e:'🪨', bg:'#f1f5f9',c:'#475569'},
-  flint:        {n:'Silex',       e:'🔷', bg:'#dbeafe',c:'#1e40af'},
-  gold:         {n:'Or',          e:'🪙', bg:'#fef9c3',c:'#a16207'},
-  villager:     {n:'Villageois',  e:'🧑', bg:'#dbeafe',c:'#1e3a8a'},
-  baby:         {n:'Bébé',        e:'👶', bg:'#fce7f3',c:'#9d174d'},
-  plank:        {n:'Planche',     e:'🟫', bg:'#fef3c7',c:'#78350f'},
-  brick:        {n:'Brique',      e:'🧱', bg:'#fee2e2',c:'#991b1b'},
-  campfire:     {n:'Feu de camp', e:'🔥', bg:'#fff7ed',c:'#c2410c',node:1},
-  house:        {n:'Maison',      e:'🏠', bg:'#d1fae5',c:'#065f46',node:1},
-  cooked_berry: {n:'Baie cuite',  e:'🍇', bg:'#f5d0fe',c:'#86198f',food:3},
-  stew:         {n:'Ragoût',      e:'🍲', bg:'#fef3c7',c:'#92400e',food:5},
-  apple:        {n:'Pomme',       e:'🍎', bg:'#fee2e2',c:'#b91c1c',food:2},
-  sword:        {n:'Épée',        e:'⚔️', bg:'#e2e8f0',c:'#1e293b'},
-  farm:         {n:'Ferme',       e:'🌾', bg:'#fef9c3',c:'#854d0e',node:1},
-  bone:         {n:'Os',          e:'🦴', bg:'#f1f5f9',c:'#64748b'},
-  shield:       {n:'Bouclier',   e:'🛡️', bg:'#cbd5e1',c:'#0f172a'},
-  forest_zone:  {n:'Zone Forêt', e:'🌿', bg:'#bbf7d0',c:'#14532d',node:1},
-  cave_zone:    {n:'Grotte',     e:'⛰️', bg:'#94a3b8',c:'#0f172a',node:1},
-  iron_ore:     {n:'Minerai',    e:'🔩', bg:'#64748b',c:'#f8fafc'},
-  forge:        {n:'Forge',      e:'🔨', bg:'#fef3c7',c:'#7c2d12',node:1},
-  iron_sword:   {n:'Épée de Fer',e:'🗡️', bg:'#e2e8f0',c:'#0f172a'},
-  wolf:         {n:'Loup',        e:'🐺', bg:'#374151',c:'#f9fafb',monster:1,aggroMax:15},
-  goblin:       {n:'Gobelin',     e:'👺', bg:'#4c1d95',c:'#f5f3ff',monster:1,aggroMax:12},
-  troll:        {n:'Troll',       e:'👹', bg:'#7f1d1d',c:'#fef2f2',monster:1,aggroMax:10},
+  berry_bush:   {n:'Buisson',     e:'🫐', bg:'#bbf7d0',c:'#14532d',node:1,   desc:'Produit des baies avec un villageois'},
+  tree:         {n:'Arbre',       e:'🌳', bg:'#dcfce7',c:'#14532d',node:1,   desc:'Produit du bois avec un villageois'},
+  rock:         {n:'Rocher',      e:'🪨', bg:'#e2e8f0',c:'#334155',node:1,   desc:'Produit de la pierre avec un villageois'},
+  berry:        {n:'Baie',        e:'🫐', bg:'#f3e8ff',c:'#6b21a8',food:1,   desc:'Nourriture : +1 par villageois'},
+  wood:         {n:'Bois',        e:'🪵', bg:'#fef3c7',c:'#92400e',          desc:'Matériau de base pour crafter'},
+  stone:        {n:'Pierre',      e:'🪨', bg:'#f1f5f9',c:'#475569',          desc:'Matériau solide pour construire'},
+  flint:        {n:'Silex',       e:'🔷', bg:'#dbeafe',c:'#1e40af',          desc:'Permet de faire du feu ou une arme'},
+  gold:         {n:'Or',          e:'🪙', bg:'#fef9c3',c:'#a16207',          desc:'Monnaie pour acheter des paquets'},
+  villager:     {n:'Villageois',  e:'🧑', bg:'#dbeafe',c:'#1e3a8a',          desc:'Travaille sur les ressources et craft'},
+  baby:         {n:'Bébé',        e:'👶', bg:'#fce7f3',c:'#9d174d',          desc:'Grandit en villageois avec le temps'},
+  plank:        {n:'Planche',     e:'🟫', bg:'#fef3c7',c:'#78350f',          desc:'Bois transformé, utile pour construire'},
+  brick:        {n:'Brique',      e:'🧱', bg:'#fee2e2',c:'#991b1b',          desc:'Pierre transformée, pour les bâtiments'},
+  campfire:     {n:'Feu de camp', e:'🔥', bg:'#fff7ed',c:'#c2410c',node:1,   desc:'Permet de cuisiner la nourriture'},
+  house:        {n:'Maison',      e:'🏠', bg:'#d1fae5',c:'#065f46',node:1,   desc:'Permet d\'avoir des bébés'},
+  cooked_berry: {n:'Baie cuite',  e:'🍇', bg:'#f5d0fe',c:'#86198f',food:3,   desc:'Nourriture : +3 par villageois'},
+  stew:         {n:'Ragoût',      e:'🍲', bg:'#fef3c7',c:'#92400e',food:5,   desc:'Nourriture : +5 par villageois'},
+  apple:        {n:'Pomme',       e:'🍎', bg:'#fee2e2',c:'#b91c1c',food:2,   desc:'Nourriture : +2 par villageois'},
+  sword:        {n:'Épée',        e:'⚔️', bg:'#e2e8f0',c:'#1e293b',          desc:'Combat les monstres (empile sur eux)'},
+  farm:         {n:'Ferme',       e:'🌾', bg:'#fef9c3',c:'#854d0e',node:1,   desc:'Produit des pommes avec un villageois'},
+  bone:         {n:'Os',          e:'🦴', bg:'#f1f5f9',c:'#64748b',          desc:'Butin du loup. 3 Os → Or'},
+  shield:       {n:'Bouclier',    e:'🛡️', bg:'#cbd5e1',c:'#0f172a',          desc:'Bloque une attaque de monstre'},
+  forest_zone:  {n:'Zone Forêt',  e:'🌿', bg:'#bbf7d0',c:'#14532d',node:1,  desc:'Exploration : Bois + Baie en boucle'},
+  cave_zone:    {n:'Grotte',      e:'⛰️', bg:'#94a3b8',c:'#0f172a',node:1,  desc:'Exploration : Minerai de fer en boucle'},
+  iron_ore:     {n:'Minerai',     e:'🔩', bg:'#64748b',c:'#f8fafc',          desc:'Nécessaire pour forger une Épée de Fer'},
+  forge:        {n:'Forge',       e:'🔨', bg:'#fef3c7',c:'#7c2d12',node:1,  desc:'Permet de fabriquer l\'Épée de Fer'},
+  iron_sword:   {n:'Épée de Fer', e:'🗡️', bg:'#e2e8f0',c:'#0f172a',         desc:'Épée améliorée : combat 2-3× plus vite'},
+  wolf:         {n:'Loup',        e:'🐺', bg:'#374151',c:'#f9fafb',monster:1,aggroMax:15, desc:'Attaque dans 15s si pas combattu'},
+  goblin:       {n:'Gobelin',     e:'👺', bg:'#4c1d95',c:'#f5f3ff',monster:1,aggroMax:12, desc:'Attaque dans 12s. Laisse de l\'Or'},
+  troll:        {n:'Troll',       e:'👹', bg:'#7f1d1d',c:'#fef2f2',monster:1,aggroMax:10, desc:'Attaque dans 10s. Nécessite 2 Épées'},
 };
 
 const RECIPES = [
@@ -125,6 +134,8 @@ const RECIPES = [
   {i:['tree','villager'],            o:['wood'],    keep:['tree','villager'],       t:5,  rep:1, d:'Arbre + Villageois → Bois'},
   {i:['rock','villager'],            o:['stone'],   keep:['rock','villager'],       t:6,  rep:1, d:'Rocher + Villageois → Pierre'},
   {i:['farm','villager'],            o:['apple'],   keep:['farm','villager'],       t:7,  rep:1, d:'Ferme + Villageois → Pomme'},
+  {i:['forest_zone','villager'],     o:['wood','berry'], keep:['forest_zone','villager'], t:8, rep:1, d:'Zone Forêt + Villageois → Bois + Baie'},
+  {i:['cave_zone','villager'],       o:['iron_ore'],keep:['cave_zone','villager'],  t:10, rep:1, d:'Grotte + Villageois → Minerai'},
   {i:['flint','wood'],               o:['campfire'],           keep:[],             t:3,  rep:0, d:'Silex + Bois → Feu de camp'},
   {i:['berry','campfire'],           o:['cooked_berry'],       keep:['campfire'],   t:2,  rep:0, d:'Feu + Baie → Baie cuite'},
   {i:['apple','campfire'],           o:['stew'],               keep:['campfire'],   t:3,  rep:0, d:'Feu + Pomme → Ragoût'},
@@ -134,45 +145,39 @@ const RECIPES = [
   {i:['brick','brick','plank','plank','villager'], o:['house'],  keep:[],           t:10, rep:0, d:'Villageois + 2 Planches + 2 Briques → Maison'},
   {i:['brick','plank','plank','villager'],         o:['farm'],   keep:['villager'], t:8,  rep:0, d:'Villageois + 2 Planches + Brique → Ferme'},
   {i:['flint','plank','villager'],                o:['sword'],  keep:['villager'], t:5,  rep:0, d:'Villageois + Planche + Silex → Épée'},
+  {i:['plank','plank','villager'],                o:['shield'], keep:['villager'], t:5,  rep:0, d:'2 Planches + Villageois → Bouclier'},
+  {i:['stone','stone','stone','plank','villager'], o:['forge'],  keep:['villager'], t:12, rep:0, d:'3 Pierres + Planche + Villageois → Forge'},
+  {i:['forge','iron_ore','iron_ore','villager'],   o:['iron_sword'], keep:['forge','villager'], t:8, rep:0, d:'Forge + 2 Minerais + Villageois → Épée de Fer'},
   {i:['house','villager','villager'], o:['baby'],  keep:['house','villager','villager'], t:15, rep:0, d:'Maison + 2 Villageois → Bébé'},
   {i:['baby'],                        o:['villager'], keep:[],                     t:10, rep:0, d:'Bébé → Villageois'},
   {i:['sword','wolf'],               o:['bone'],        keep:['sword'],            t:4,  rep:0, d:'⚔️ Épée + Loup → Os'},
   {i:['sword','goblin'],             o:['gold'],        keep:['sword'],            t:6,  rep:0, d:'⚔️ Épée + Gobelin → Or'},
   {i:['sword','sword','troll'],      o:['gold','gold'], keep:['sword','sword'],    t:9,  rep:0, d:'⚔️ 2 Épées + Troll → 2 Or'},
+  {i:['iron_sword','wolf'],          o:['bone'],        keep:['iron_sword'],       t:2,  rep:0, d:'🗡️ Épée de Fer + Loup → Os'},
+  {i:['iron_sword','goblin'],        o:['gold'],        keep:['iron_sword'],       t:3,  rep:0, d:'🗡️ Épée de Fer + Gobelin → Or'},
+  {i:['iron_sword','troll'],         o:['gold','gold'], keep:['iron_sword'],       t:5,  rep:0, d:'🗡️ Épée de Fer + Troll → 2 Or'},
   {i:['bone','bone','bone'],         o:['gold'],        keep:[],                   t:4,  rep:0, d:'3 Os → Or'},
-  // Bouclier
-  {i:['plank','plank','villager'],   o:['shield'],      keep:['villager'],          t:5,  rep:0, d:'🛡️ 2 Planches + Villageois → Bouclier'},
-  // Exploration
-  {i:['forest_zone','villager'],     o:['wood','berry'],keep:['forest_zone','villager'], t:8, rep:1, d:'🌿 Zone Forêt + Villageois → Bois + Baie'},
-  {i:['cave_zone','villager'],       o:['iron_ore'],    keep:['cave_zone','villager'],   t:10,rep:1, d:'⛰️ Grotte + Villageois → Minerai'},
-  // Forge
-  {i:['stone','stone','stone','plank','villager'], o:['forge'], keep:['villager'],  t:12, rep:0, d:'🔨 3 Pierres + Planche + Villageois → Forge'},
-  {i:['forge','iron_ore','iron_ore','villager'],   o:['iron_sword'], keep:['forge','villager'], t:8, rep:0, d:'🗡️ Forge + 2 Minerais + Villageois → Épée de Fer'},
-  // Combat épée de fer (plus rapide)
-  {i:['iron_sword','wolf'],          o:['bone'],        keep:['iron_sword'],        t:2,  rep:0, d:'🗡️ Épée de Fer + Loup → Os'},
-  {i:['iron_sword','goblin'],        o:['gold'],        keep:['iron_sword'],        t:3,  rep:0, d:'🗡️ Épée de Fer + Gobelin → Or'},
-  {i:['iron_sword','troll'],         o:['gold','gold'], keep:['iron_sword'],        t:5,  rep:0, d:'🗡️ Épée de Fer + Troll → 2 Or'},
 ];
 
 const PACKS = {
-  starter:{n:'Paquet de base', cost:3, cnt:3, pool:[
+  starter:{n:'Paquet de base', cost:3, cnt:3, unlock:0, hint:'🫐 🌳 🪨 🧑', pool:[
     {t:'berry_bush',w:20},{t:'tree',w:15},{t:'rock',w:12},
     {t:'berry',w:35},{t:'wood',w:30},{t:'stone',w:25},
     {t:'flint',w:8},{t:'gold',w:12},{t:'villager',w:6},{t:'apple',w:18},
   ]},
-  forest:{n:'Paquet Forêt', cost:5, cnt:4, pool:[
+  forest:{n:'Paquet Forêt', cost:5, cnt:4, unlock:0, hint:'🌳 🪵 🔷 🧑', pool:[
     {t:'tree',w:40},{t:'wood',w:45},{t:'flint',w:25},
     {t:'berry_bush',w:30},{t:'villager',w:14},{t:'stone',w:18},{t:'apple',w:22},
   ]},
-  adv:{n:'Paquet Avancé', cost:8, cnt:5, pool:[
+  adv:{n:'Paquet Avancé', cost:8, cnt:5, unlock:0, hint:'🟫 🧱 🔷 ⚔️', pool:[
     {t:'plank',w:30},{t:'brick',w:25},{t:'flint',w:20},
     {t:'villager',w:18},{t:'gold',w:20},{t:'stone',w:20},{t:'apple',w:15},{t:'sword',w:8},
   ]},
-  combat:{n:'Paquet Combat', cost:6, cnt:4, pool:[
+  combat:{n:'Paquet Combat', cost:6, cnt:4, unlock:3, hint:'⚔️ 🟫 🔷 🪙', pool:[
     {t:'sword',w:30},{t:'plank',w:20},{t:'flint',w:20},
     {t:'stone',w:15},{t:'gold',w:15},{t:'bone',w:10},
   ]},
-  explor:{n:'Paquet Exploration', cost:7, cnt:4, pool:[
+  explor:{n:'Paquet Exploration', cost:7, cnt:4, unlock:8, hint:'🌿 ⛰️ 🔩 🟫', pool:[
     {t:'forest_zone',w:25},{t:'cave_zone',w:20},{t:'iron_ore',w:30},
     {t:'plank',w:20},{t:'stone',w:15},{t:'gold',w:10},
   ]},
@@ -181,13 +186,129 @@ const PACKS = {
 const WIN_DAY=25, CW=82, CH=104, SO=24;
 let G={};
 
+// ── AUDIO ────────────────────────────────────────────────────────────────────
+const AC = new (window.AudioContext||window.webkitAudioContext)();
+document.addEventListener('mousedown',()=>{if(AC.state==='suspended')AC.resume();},{passive:true});
+
+function playSound(type){
+  if(!AC)return;
+  try{
+    const t=AC.currentTime;
+    if(type==='craft_start'){
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.connect(g);g.connect(AC.destination);
+      o.frequency.setValueAtTime(300,t);o.frequency.exponentialRampToValueAtTime(520,t+.12);
+      g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);
+      o.start(t);o.stop(t+.15);
+    } else if(type==='craft_done'){
+      [523,659,784].forEach((f,i)=>{
+        const o=AC.createOscillator(),g=AC.createGain();o.type='sine';
+        o.connect(g);g.connect(AC.destination);
+        o.frequency.setValueAtTime(f,t+i*.09);
+        g.gain.setValueAtTime(.22,t+i*.09);g.gain.exponentialRampToValueAtTime(.001,t+i*.09+.28);
+        o.start(t+i*.09);o.stop(t+i*.09+.3);
+      });
+    } else if(type==='monster_attack'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';
+      o.connect(g);g.connect(AC.destination);
+      o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(40,t+.35);
+      g.gain.setValueAtTime(.5,t);g.gain.exponentialRampToValueAtTime(.001,t+.35);
+      o.start(t);o.stop(t+.35);
+    } else if(type==='shield_block'){
+      [900,1400,700].forEach((f,i)=>{
+        const o=AC.createOscillator(),g=AC.createGain();o.type='square';
+        o.connect(g);g.connect(AC.destination);
+        o.frequency.setValueAtTime(f,t+i*.025);
+        g.gain.setValueAtTime(.12,t+i*.025);g.gain.exponentialRampToValueAtTime(.001,t+i*.025+.22);
+        o.start(t+i*.025);o.stop(t+i*.025+.25);
+      });
+    } else if(type==='buy_pack'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';
+      o.connect(g);g.connect(AC.destination);
+      o.frequency.setValueAtTime(880,t);o.frequency.setValueAtTime(1100,t+.07);
+      g.gain.setValueAtTime(.28,t);g.gain.exponentialRampToValueAtTime(.001,t+.28);
+      o.start(t);o.stop(t+.3);
+    } else if(type==='wave_start'){
+      for(let i=0;i<3;i++){
+        const o=AC.createOscillator(),g=AC.createGain();o.type='sawtooth';
+        o.connect(g);g.connect(AC.destination);
+        o.frequency.setValueAtTime(i%2===0?240:190,t+i*.22);
+        g.gain.setValueAtTime(.32,t+i*.22);g.gain.exponentialRampToValueAtTime(.001,t+i*.22+.2);
+        o.start(t+i*.22);o.stop(t+i*.22+.22);
+      }
+    } else if(type==='error'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='square';
+      o.connect(g);g.connect(AC.destination);
+      o.frequency.setValueAtTime(110,t);
+      g.gain.setValueAtTime(.13,t);g.gain.exponentialRampToValueAtTime(.001,t+.13);
+      o.start(t);o.stop(t+.14);
+    } else if(type==='sell'){
+      const o=AC.createOscillator(),g=AC.createGain();o.type='sine';
+      o.connect(g);g.connect(AC.destination);
+      o.frequency.setValueAtTime(440,t);o.frequency.exponentialRampToValueAtTime(330,t+.12);
+      g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);
+      o.start(t);o.stop(t+.15);
+    } else if(type==='victory'){
+      [523,659,784,1047].forEach((f,i)=>{
+        const o=AC.createOscillator(),g=AC.createGain();
+        o.connect(g);g.connect(AC.destination);
+        o.frequency.setValueAtTime(f,t+i*.1);
+        g.gain.setValueAtTime(.28,t+i*.1);g.gain.exponentialRampToValueAtTime(.001,t+i*.1+.4);
+        o.start(t+i*.1);o.stop(t+i*.1+.45);
+      });
+    }
+  }catch(e){}
+}
+
+// ── TOOLTIP ───────────────────────────────────────────────────────────────────
+const ttEl=document.getElementById('tooltip');
+function showTooltip(e,type){
+  if(G.drag)return;
+  const d=CD[type]; if(!d)return;
+  ttEl.querySelector('.tt-name').textContent=d.e+' '+d.n;
+  ttEl.querySelector('.tt-desc').textContent=d.desc||'';
+  const uses=RECIPES.filter(r=>r.i.includes(type));
+  if(uses.length>0){
+    ttEl.querySelector('.tt-label').textContent='Recettes :';
+    ttEl.querySelector('.tt-r').innerHTML=uses.slice(0,4).map(r=>
+      r.i.map(t=>CD[t]?.e||t).join('+')+' → '+r.o.map(t=>CD[t]?.e||t).join(',')+' <span style="color:#888">('+r.t+'s'+(r.rep?' 🔄':'')+')</span>'
+    ).join('<br>');
+  } else {
+    ttEl.querySelector('.tt-label').textContent='';
+    ttEl.querySelector('.tt-r').textContent='';
+  }
+  ttEl.style.display='block';
+  posTooltip(e);
+}
+function posTooltip(e){
+  const x=e.clientX+16, y=e.clientY-10;
+  ttEl.style.left=Math.min(x,window.innerWidth-220)+'px';
+  ttEl.style.top=Math.max(8,y)+'px';
+}
+function hideTooltip(){ttEl.style.display='none';}
+document.addEventListener('mousemove',e=>{if(ttEl.style.display!=='none')posTooltip(e);});
+
+// ── SHOP ─────────────────────────────────────────────────────────────────────
+function buildShop(){
+  const el=document.getElementById('shop');
+  el.innerHTML='';
+  for(const [key,p] of Object.entries(PACKS)){
+    const btn=document.createElement('button');
+    btn.className='pbtn'; btn.id='b-'+key;
+    btn.onclick=()=>buyPack(key);
+    btn.innerHTML=p.n+' — '+p.cost+'🪙<small>'+p.hint+'</small>';
+    btn.style.display=(p.unlock>0)?'none':'block';
+    el.appendChild(btn);
+  }
+}
+
+// ── STATE ────────────────────────────────────────────────────────────────────
 function initG(){
   G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false};
   document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
   document.getElementById('log').innerHTML='';
   ['overlay','victory','pause'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('b-combat').style.display='none';
-  document.getElementById('b-explor').style.display='none';
+  buildShop();
   spawn('berry_bush',70,70); spawn('tree',200,70); spawn('villager',330,70);
   spawn('berry',460,70);     spawn('berry',460,180); spawn('flint',330,180);
   updateHUD();
@@ -196,6 +317,7 @@ function initG(){
   requestAnimationFrame(loop);
 }
 
+// ── CARDS ────────────────────────────────────────────────────────────────────
 function spawn(type,x,y){
   const id=G.nid++; const d=CD[type];
   G.cards[id]={id,type,x,y,sid:null,aggro:0};
@@ -206,12 +328,15 @@ function spawn(type,x,y){
   el.innerHTML=`<div class="card-emoji">${d.e}</div><div class="card-name">${d.n}</div><div class="card-bar"><div class="card-bar-fill"></div></div>`;
   el.addEventListener('mousedown',e=>{e.preventDefault();startDrag(e,id);});
   el.addEventListener('contextmenu',e=>{e.preventDefault();sellCard(id);});
+  el.addEventListener('mouseenter',e=>showTooltip(e,type));
+  el.addEventListener('mouseleave',hideTooltip);
   document.getElementById('table').appendChild(el);
   return id;
 }
 function cel(id){return document.getElementById('c'+id);}
 function delCard(id){const e=cel(id);if(e)e.remove();delete G.cards[id];}
 
+// ── STACKS ───────────────────────────────────────────────────────────────────
 function mkStack(ids){
   const sid=G.nid++;
   const root=G.cards[ids[0]];
@@ -256,13 +381,17 @@ function updateCV(id){
   el.querySelector('.card-bar').style.display='none';
 }
 
+// ── RECIPES ──────────────────────────────────────────────────────────────────
 function sortedTypes(ids){return ids.map(i=>G.cards[i].type).sort();}
 function arrEq(a,b){return a.length===b.length&&a.every((v,i)=>v===b[i]);}
 function checkRecipe(sid){
   const s=G.stacks[sid]; if(!s)return;
   const types=sortedTypes(s.ids);
   for(const r of RECIPES){
-    if(arrEq(types,[...r.i].sort())){s.recipe=r;s.prog=0;updateSV(sid);return;}
+    if(arrEq(types,[...r.i].sort())){
+      if(!s.recipe)playSound('craft_start');
+      s.recipe=r; s.prog=0; updateSV(sid); return;
+    }
   }
   s.recipe=null; updateSV(sid);
 }
@@ -284,12 +413,15 @@ function execRecipe(sid){
     kept.forEach((cid,i)=>{G.cards[cid].x=rx;G.cards[cid].y=ry+i*SO;updateCV(cid);});
     if(kept.length>1){const ns=mkStack(kept);if(r.rep)checkRecipe(ns);}
   }
+  playSound('craft_done');
   log('✨ '+r.o.map(t=>CD[t].e+CD[t].n).join(', ')+' créé !');
   updateHUD();
 }
 
+// ── DRAG ─────────────────────────────────────────────────────────────────────
 function startDrag(e,id){
   if(G.over||G.paused)return;
+  hideTooltip();
   const c=G.cards[id],el=cel(id); if(!el)return;
   const tr=document.getElementById('table').getBoundingClientRect();
   const er=el.getBoundingClientRect();
@@ -308,7 +440,17 @@ document.addEventListener('mouseup',()=>{
   const id=G.drag.id; G.drag=null;
   const el=cel(id); if(el){el.classList.remove('dragging');el.style.zIndex=10;}
   const tgt=findTarget(id);
-  if(tgt){if(tgt.sid)addToStack(tgt.sid,id);else mkStack([tgt.id,id]);}
+  if(tgt){
+    if(tgt.sid)addToStack(tgt.sid,id);
+    else mkStack([tgt.id,id]);
+    // Shake + error sound si pas de recette
+    const sid=G.cards[id]?.sid;
+    if(sid&&!G.stacks[sid]?.recipe){
+      playSound('error');
+      const root=cel(G.stacks[sid]?.ids[0]);
+      if(root){root.classList.remove('shake');void root.offsetWidth;root.classList.add('shake');setTimeout(()=>root.classList.remove('shake'),400);}
+    }
+  }
   updateHUD();
 });
 function findTarget(dragId){
@@ -325,28 +467,31 @@ function findTarget(dragId){
   return null;
 }
 
+// ── SELL ─────────────────────────────────────────────────────────────────────
 function sellCard(id){
   if(G.over||G.paused||!G.cards[id])return;
   const t=G.cards[id].type;
   if(CD[t].node||CD[t].monster)return;
   if(G.cards[id].sid)rmFromStack(id);
-  delCard(id); G.gold+=1; log('💰 +1🪙 (vente)'); updateHUD();
+  delCard(id); G.gold+=1; playSound('sell'); log('💰 +1🪙 (vente)'); updateHUD();
 }
 
+// ── COMBAT ───────────────────────────────────────────────────────────────────
 function monsterAttack(mid){
   const c=G.cards[mid]; if(!c)return;
   const mName=CD[c.type].n;
   if(c.sid)rmFromStack(mid);
   delCard(mid);
-  // Bouclier absorbe le coup
   const shields=Object.values(G.cards).filter(c=>c.type==='shield');
   if(shields.length>0){
     const sh=shields[0];
     if(sh.sid)rmFromStack(sh.id);
     delCard(sh.id);
+    playSound('shield_block');
     log('🛡️ Le bouclier a protégé un villageois contre le '+mName+' !');
     updateHUD(); return;
   }
+  playSound('monster_attack');
   const villagers=Object.values(G.cards).filter(c=>c.type==='villager');
   if(villagers.length>0){
     const v=villagers[0];
@@ -374,6 +519,7 @@ function spawnWave(){
   monsters.forEach(type=>{
     spawn(type,40+Math.random()*(tbl.width-180),40+Math.random()*(tbl.height-180));
   });
+  playSound('wave_start');
   const el=document.getElementById('wave-alert');
   el.textContent='⚔️ Vague '+waveNum+' ! '+monsters.map(t=>CD[t].e+' '+CD[t].n).join(', ')+' !';
   el.style.display='block';
@@ -381,6 +527,7 @@ function spawnWave(){
   log('⚔️ Vague '+waveNum+' ! Empile une Épée sur les monstres !');
 }
 
+// ── GAME LOOP ────────────────────────────────────────────────────────────────
 function loop(ts){
   if(G.over||G.paused)return;
   if(!G.ts)G.ts=ts;
@@ -405,15 +552,21 @@ function loop(ts){
     const id=parseInt(idStr), d=CD[c.type];
     if(!d||!d.monster)continue;
     const inCombat=c.sid&&G.stacks[c.sid]?.recipe;
+    const el=cel(id);
     if(!inCombat){
       c.aggro=(c.aggro||0)+dt;
-      const el=cel(id);
+      const pct=c.aggro/d.aggroMax;
       if(el){
         const bar=el.querySelector('.card-bar'), fill=el.querySelector('.card-bar-fill');
         if(bar)bar.style.display='block';
-        if(fill){fill.style.background='#ef4444';fill.style.width=Math.min(c.aggro/d.aggroMax*100,100)+'%';}
+        if(fill){fill.style.background='#ef4444';fill.style.width=Math.min(pct*100,100)+'%';}
+        // Pulse quand > 70%
+        if(pct>=.7)el.classList.add('danger-pulse');
+        else el.classList.remove('danger-pulse');
       }
       if(c.aggro>=d.aggroMax)toAttack.push(id);
+    } else {
+      if(el)el.classList.remove('danger-pulse');
     }
   }
   toAttack.forEach(id=>{if(G.cards[id])monsterAttack(id);});
@@ -422,6 +575,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 
+// ── MOON / FOOD ───────────────────────────────────────────────────────────────
 function endMoon(){
   if(G.moon>WIN_DAY){G.over=true;showVictory();return;}
   const pop=countT('villager')+countT('baby');
@@ -442,12 +596,17 @@ function endMoon(){
     log('🌙 Jour '+G.moon);
   }
   if(G.moon%5===0)spawnWave();
-  if(G.moon>=3)document.getElementById('b-combat').style.display='block';
-  if(G.moon>=8)document.getElementById('b-explor').style.display='block';
+  Object.entries(PACKS).forEach(([k,p])=>{
+    if(p.unlock>0&&G.moon>=p.unlock){
+      const b=document.getElementById('b-'+k);
+      if(b)b.style.display='block';
+    }
+  });
   updateHUD();
 }
 function countT(t){return Object.values(G.cards).filter(c=>c.type===t).length;}
 
+// ── PACKS ────────────────────────────────────────────────────────────────────
 function buyPack(key){
   const p=PACKS[key]; if(!p||G.gold<p.cost)return;
   G.gold-=p.cost;
@@ -457,6 +616,7 @@ function buyPack(key){
     const type=wRand(p.pool);
     spawn(type,Math.max(4,cx+(Math.random()-.5)*220-CW/2),Math.max(4,cy+(Math.random()-.5)*160-CH/2));
   }
+  playSound('buy_pack');
   log('📦 Ouvert : '+p.n); updateHUD();
 }
 function wRand(pool){
@@ -466,6 +626,7 @@ function wRand(pool){
   return pool[pool.length-1].t;
 }
 
+// ── HUD ───────────────────────────────────────────────────────────────────────
 function updateHUD(){
   const pop=countT('villager')+countT('baby');
   const food=Object.values(G.cards).filter(c=>CD[c.type]?.food).reduce((s,c)=>s+(CD[c.type].food||0),0);
@@ -482,12 +643,14 @@ function updateHUD(){
   });
 }
 
+// ── LOG ───────────────────────────────────────────────────────────────────────
 function log(msg){
   const d=document.getElementById('log'), el=document.createElement('div');
   el.className='litem'; el.textContent=msg;
   d.appendChild(el); setTimeout(()=>el.remove(),5000);
 }
 
+// ── OVERLAYS ──────────────────────────────────────────────────────────────────
 function showOverFamine(){
   document.getElementById('over-title').textContent='☠️ Famine !';
   document.getElementById('over-msg').textContent='Tes villageois sont morts de faim.';
@@ -501,6 +664,7 @@ function showOverMonster(){
   document.getElementById('overlay').style.display='flex';
 }
 function showVictory(){
+  playSound('victory');
   document.getElementById('vscore').textContent='Tu as repoussé toutes les vagues et survécu '+WIN_DAY+' jours !';
   document.getElementById('victory').style.display='flex';
 }
@@ -509,6 +673,7 @@ function restart(){
   initG();
 }
 
+// ── PAUSE ─────────────────────────────────────────────────────────────────────
 function togglePause(){
   if(G.over)return;
   G.paused=!G.paused;
@@ -528,6 +693,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&!G.over)togglePause();
 });
 
+// ── RECIPE BOOK ───────────────────────────────────────────────────────────────
 function showRB(){
   document.getElementById('rlist').innerHTML=RECIPES.map(r=>`
     <div class="rrow">
@@ -540,6 +706,7 @@ function showRB(){
 }
 function closeRB(){document.getElementById('rb').style.display='none';}
 
+// ── START ─────────────────────────────────────────────────────────────────────
 initG();
 </script>
 </body>
