@@ -67,6 +67,22 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 .mbtn.disc:hover{background:#2a1010;border-color:#8a2d2d;}
 #resume-info{color:#6b8;font-size:12px;margin-top:-8px;height:16px;}
 .mm-version{position:absolute;bottom:16px;color:#2d5a2d;font-size:11px;}
+/* ── TUTORIEL ─────────────────────────────────────────────── */
+#tutorial{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:99500;justify-content:center;align-items:center;}
+.tut-box{background:linear-gradient(160deg,#0a1e0a,#142814);border:2px solid #2d5a2d;border-radius:16px;padding:36px 38px 28px;max-width:500px;width:92%;color:#fff;text-align:center;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.6);}
+.tut-emoji{font-size:60px;margin-bottom:10px;line-height:1;}
+.tut-title{font-size:21px;font-weight:800;color:#f7d060;margin-bottom:14px;}
+.tut-text{font-size:13.5px;line-height:1.8;color:#d1fae5;white-space:pre-line;min-height:130px;text-align:left;}
+.tut-dots{display:flex;gap:6px;justify-content:center;margin:18px 0 12px;}
+.tut-dot{width:8px;height:8px;border-radius:50%;background:#2d5a2d;transition:background .2s;}
+.tut-dot.active{background:#f7d060;}
+.tut-nav{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.tbtn{border:2px solid #2d5a2d;border-radius:8px;padding:9px 22px;cursor:pointer;font-size:14px;font-weight:700;background:#0f2310;color:#d1fae5;transition:background .15s,border-color .15s;}
+.tbtn:hover{background:#1a3a1a;border-color:#4a8a4a;}
+.tbtn.next{background:#16a34a;border-color:#22c55e;color:#fff;}
+.tbtn.next:hover{background:#15803d;}
+.tbtn.close-tut{position:absolute;top:12px;right:12px;background:rgba(120,0,0,.6);border-color:rgba(200,0,0,.5);color:#fca5a5;font-size:12px;padding:5px 12px;}
+.tbtn.close-tut:hover{background:rgba(180,0,0,.8);}
 </style>
 </head>
 <body>
@@ -132,6 +148,21 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   </div>
 </div>
 
+<!-- ── TUTORIEL ── -->
+<div id="tutorial">
+  <div class="tut-box">
+    <button class="tbtn close-tut" onclick="closeTutorial()">✕ Quitter le tuto</button>
+    <div class="tut-emoji" id="tut-emoji"></div>
+    <div class="tut-title" id="tut-title"></div>
+    <div class="tut-text" id="tut-text"></div>
+    <div class="tut-dots" id="tut-dots"></div>
+    <div class="tut-nav">
+      <button class="tbtn" id="tut-prev" onclick="prevTutoStep()">← Précédent</button>
+      <button class="tbtn next" id="tut-next" onclick="nextTutoStep()">Suivant →</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── MENU PRINCIPAL ── -->
 <div id="main-menu">
   <div class="mm-logo">🏘️</div>
@@ -140,6 +171,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <button class="mbtn" onclick="startNewGame()">🆕 Nouvelle Partie</button>
   <button class="mbtn" id="btn-resume" onclick="resumeGame()" disabled>▶ Reprendre la partie</button>
   <p id="resume-info"></p>
+  <button class="mbtn" onclick="showTutorial()" style="background:#071e07;border-color:#1a3a1a;color:#86efac;">📖 Tutoriel</button>
   <button class="mbtn disc" onclick="disconnect()">🚪 Déconnexion</button>
   <div class="mm-version">v3 — Fan Game non-officiel</div>
 </div>
@@ -759,6 +791,89 @@ function showRB(){
   document.getElementById('rb').style.display='flex';
 }
 function closeRB(){document.getElementById('rb').style.display='none';}
+
+// ── TUTORIEL ──────────────────────────────────────────────────────────────────
+const TUTO = [
+  {
+    emoji:'🏘️',
+    title:'Bienvenue dans Stacklands !',
+    text:'Stacklands est un jeu de cartes à empiler.\n\nTu gères un petit village : récolte des ressources, fabrique des objets, nourris tes villageois et repousse les vagues de monstres.\n\n🎯 Objectif : survivre 25 jours !'
+  },
+  {
+    emoji:'🃏',
+    title:'Empiler des cartes',
+    text:'Glisse une carte sur une autre pour les empiler.\n\n✅ Si la combinaison correspond à une recette → une barre verte apparaît et le craft démarre automatiquement.\n\n❌ Si les cartes tremblent en rouge → aucune recette, mauvaise combinaison.\n\n💡 Survole une carte pour voir ses recettes dans le tooltip !'
+  },
+  {
+    emoji:'🧑',
+    title:'Récolter des ressources',
+    text:'Empile un Villageois 🧑 sur une ressource pour produire en boucle :\n\n🌳 + 🧑 → Bois (en continu)\n🪨 + 🧑 → Pierre\n🫐 + 🧑 → Baie\n🌾 + 🧑 → Pomme\n🌿 + 🧑 → Bois + Baie (zone forêt)\n⛰️ + 🧑 → Minerai de fer (grotte)\n\nLe villageois reste toujours sur la ressource !'
+  },
+  {
+    emoji:'⚒️',
+    title:'Fabriquer des objets',
+    text:'Empile plusieurs cartes pour crafter :\n\n🔷 + 🪵 → 🔥 Feu de camp\n🪵×3 + 🧑 → 🟫 Planche\n🪨×3 + 🧑 → 🧱 Brique\n🔷 + 🟫 + 🧑 → ⚔️ Épée\n🟫×2 + 🧑 → 🛡️ Bouclier\n🪨×3 + 🟫 + 🧑 → 🔨 Forge\n\n📖 Ouvre le Livre de Recettes (en haut) pour voir tout !'
+  },
+  {
+    emoji:'🍖',
+    title:'La nourriture & les jours',
+    text:'La barre en haut = le temps avant la fin du jour (60s).\n\nÀ chaque fin de jour, tes villageois mangent autant de nourriture que leur nombre.\n\n🍖 Nourriture insuffisante → ☠️ FAMINE → partie perdue !\n\n💡 Cuisine tes baies sur un 🔥 feu de camp pour obtenir plus :\n🫐 Baie = 1 repas\n🍇 Baie cuite = 3 repas\n🍲 Ragoût = 5 repas'
+  },
+  {
+    emoji:'⚔️',
+    title:'Combattre les monstres',
+    text:'Tous les 5 jours, une vague de monstres arrive !\n\n🐺 Loup → attaque en 15 secondes\n👺 Gobelin → attaque en 12 secondes\n👹 Troll → attaque en 10 secondes\n\nPour combattre : empile une ⚔️ Épée sur le monstre.\n\n⚠️ La barre rouge = temps avant l\'attaque.\nQuand la carte pulse en rouge → URGENT, agis vite !\n\nL\'épée survit après le combat 👍'
+  },
+  {
+    emoji:'🛡️',
+    title:'Se protéger & progresser',
+    text:'🛡️ Bouclier (2 Planches + 🧑) → bloque une attaque de monstre\n\n🔨 Forge (3 Pierres + Planche + 🧑) → nécessaire pour l\'épée de fer\n\n🗡️ Épée de Fer (Forge + 2 Minerais + 🧑) → 2-3× plus rapide que l\'épée normale, bat les trolls seule !\n\n💰 Achète des Paquets avec l\'Or 🪙 pour obtenir de nouvelles cartes. Le Paquet Combat se débloque au Jour 3, le Paquet Exploration au Jour 8.'
+  },
+  {
+    emoji:'🎮',
+    title:'Tu es prêt !',
+    text:'Résumé des règles :\n\n1️⃣ Récolte ressources avec 🧑 villageois\n2️⃣ Nourris tes villageois chaque jour\n3️⃣ Fabrique des outils et bâtiments\n4️⃣ Combats les vagues avec des épées\n5️⃣ Utilise boucliers et forge pour progresser\n\n🎯 Survive 25 jours = VICTOIRE !\n\nLa partie est sauvegardée automatiquement chaque jour. Bonne chance ! 🍀'
+  },
+];
+let tutoStep=0;
+
+function showTutorial(){
+  playSound('menu_click');
+  tutoStep=0; renderTuto();
+  document.getElementById('tutorial').style.display='flex';
+}
+function closeTutorial(){
+  playSound('menu_click');
+  document.getElementById('tutorial').style.display='none';
+}
+function nextTutoStep(){
+  playSound('craft_start');
+  if(tutoStep<TUTO.length-1){tutoStep++;renderTuto();}
+}
+function prevTutoStep(){
+  playSound('craft_start');
+  if(tutoStep>0){tutoStep--;renderTuto();}
+}
+function renderTuto(){
+  const s=TUTO[tutoStep];
+  document.getElementById('tut-emoji').textContent=s.emoji;
+  document.getElementById('tut-title').textContent=s.title;
+  document.getElementById('tut-text').textContent=s.text;
+  // Points de progression
+  const dots=document.getElementById('tut-dots');
+  dots.innerHTML=TUTO.map((_,i)=>`<div class="tut-dot${i===tutoStep?' active':''}"></div>`).join('');
+  // Bouton précédent
+  document.getElementById('tut-prev').style.visibility=tutoStep>0?'visible':'hidden';
+  // Bouton suivant / commencer
+  const next=document.getElementById('tut-next');
+  if(tutoStep===TUTO.length-1){
+    next.textContent='🎮 Commencer !';
+    next.onclick=()=>{closeTutorial();startNewGame();};
+  }else{
+    next.textContent='Suivant →';
+    next.onclick=nextTutoStep;
+  }
+}
 
 // ── START ─────────────────────────────────────────────────────────────────────
 showMainMenu();
