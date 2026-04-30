@@ -117,6 +117,21 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 #mm-stats{color:#4ade80;font-size:12px;text-align:center;max-width:340px;line-height:1.7;min-height:18px;}
 @keyframes famine-blink{0%,100%{color:#fca5a5}50%{color:#ef4444;text-shadow:0 0 8px rgba(239,68,68,.7);}}
 .famine-warn{animation:famine-blink .7s infinite;}
+/* ── SPAWN CARTE ── */
+@keyframes cardSpawn{0%{opacity:0;transform:scale(.3) translateY(-8px)}65%{transform:scale(1.07)}100%{opacity:1;transform:scale(1) translateY(0)}}
+.card-spawn{animation:cardSpawn .38s cubic-bezier(.17,.67,.36,1.3) forwards;}
+/* ── CARTE CATEGORIE ── */
+.card-cat{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;}
+.cat-node{background:#4ade80;box-shadow:0 0 4px #4ade80;}.cat-food{background:#fb923c;box-shadow:0 0 4px #fb923c;}
+.cat-monster{background:#ef4444;box-shadow:0 0 4px #ef4444;}.cat-craft{background:#60a5fa;box-shadow:0 0 4px #60a5fa;}
+/* ── GRADIENT CARTE ── */
+.card::after{content:'';position:absolute;inset:0;border-radius:7px;background:linear-gradient(135deg,rgba(255,255,255,.13) 0%,transparent 55%);pointer-events:none;}
+/* ── FLASH JOUR ── */
+#day-flash{position:fixed;inset:0;background:rgba(5,10,30,.55);pointer-events:none;z-index:8000;opacity:0;transition:opacity .12s ease-in;}
+/* ── CONFETTI ── */
+.confetti-piece{position:fixed;pointer-events:none;z-index:8999;border-radius:2px;}
+/* ── VICTOIRE STATS ── */
+#victory-stats{font-size:14px;color:#86efac;letter-spacing:.5px;margin-top:4px;}
 #tooltip .tt-sell{color:#fbbf24;font-size:11px;margin-top:5px;border-top:1px solid rgba(255,255,255,.08);padding-top:4px;}
 </style>
 </head>
@@ -134,6 +149,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <span style="color:#666;font-size:11px;">Clic-droit=vendre | Échap=Pause</span>
 </div>
 
+<div id="day-flash"></div>
 <!-- Table de jeu -->
 <div id="table"><div id="wave-alert"></div></div>
 <div id="shop"></div>
@@ -155,6 +171,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <h2>🏆 Victoire !</h2>
   <p>Tu as survécu 25 jours et repoussé toutes les vagues !</p>
   <p id="vscore"></p>
+  <p id="victory-stats"></p>
   <div class="btn-row">
     <button class="obtn green" onclick="startNewGame()">🔄 Rejouer</button>
     <button class="obtn" onclick="showMainMenu()">🏠 Menu Principal</button>
@@ -519,9 +536,11 @@ function initG(){
 function createCardDOM(id,type){
   const d=CD[type];
   const el=document.createElement('div');
-  el.className='card'+(d.monster?' monster':'');el.id='c'+id;
+  const catCls=d.monster?'cat-monster':d.node?'cat-node':d.food?'cat-food':'cat-craft';
+  el.className='card card-spawn'+(d.monster?' monster':'');el.id='c'+id;
   el.style.cssText=`left:${G.cards[id].x}px;top:${G.cards[id].y}px;background:${d.bg};color:${d.c};z-index:10;`;
-  el.innerHTML=`<div class="card-emoji">${d.e}</div><div class="card-name">${d.n}</div><div class="card-bar"><div class="card-bar-fill"></div></div>`;
+  el.innerHTML=`<div class="card-cat ${catCls}"></div><div class="card-emoji">${d.e}</div><div class="card-name">${d.n}</div><div class="card-bar"><div class="card-bar-fill"></div></div>`;
+  setTimeout(()=>el.classList.remove('card-spawn'),420);
   el.addEventListener('mousedown',e=>{e.preventDefault();startDrag(e,id);});
   el.addEventListener('contextmenu',e=>{e.preventDefault();sellCard(id);});
   el.addEventListener('mouseenter',e=>showTooltip(e,type));
@@ -615,6 +634,7 @@ function execRecipe(sid){
   if(r.o.includes('shield'))G._stats.madeShield=true;
   if(r.o.includes('campfire'))G._stats.madeCampfire=true;
   if(r.o.includes('house'))G._stats.madeHouse=true;
+  spawnParticles(rx,ry);
   // Secret card reveal
   r.o.forEach(type=>{
     if(CD[type]?.secret&&!hasDiscoveredSecret(type)){
@@ -771,6 +791,8 @@ function loop(ts){
 // ── MOON / FOOD ───────────────────────────────────────────────────────────────
 function endMoon(){
   if(G.moon>WIN_DAY){G.over=true;showVictory();return;}
+  const fl=document.getElementById('day-flash');
+  if(fl){fl.style.opacity=G.moon%5===0?'.7':'.35';setTimeout(()=>fl.style.opacity='0',G.moon%5===0?500:220);}
   const pop=countT('villager')+countT('baby');
   if(pop>0){
     const fCards=Object.values(G.cards).filter(c=>CD[c.type]?.food).sort((a,b)=>(CD[b.type].food||0)-(CD[a.type].food||0));
@@ -857,7 +879,9 @@ function showVictory(){
   }
   playSound('victory');
   document.getElementById('vscore').textContent='Tu as repoussé toutes les vagues et survécu '+WIN_DAY+' jours !';
+  document.getElementById('victory-stats').textContent='⚒️ '+(G._stats?.crafts||0)+' crafts  |  💀 '+(G._stats?.kills||0)+' monstres  |  🏅 '+getAchievements().length+'/'+ACHIEVEMENTS.length+' succès';
   document.getElementById('victory').style.display='flex';
+  spawnConfetti();
 }
 
 // ── MENU PRINCIPAL ────────────────────────────────────────────────────────────
@@ -945,6 +969,43 @@ function showRB(){
   document.getElementById('rb').style.display='flex';
 }
 function closeRB(){document.getElementById('rb').style.display='none';}
+
+// ── PARTICLES & CONFETTI ─────────────────────────────────────────────────────
+function spawnParticles(x,y){
+  const tbl=document.getElementById('table');if(!tbl)return;
+  const colors=['#f7d060','#4ade80','#60a5fa','#fb7185','#a78bfa','#fbbf24','#34d399'];
+  const cx=x+CW/2,cy=y+CH/2;
+  for(let i=0;i<10;i++){
+    const p=document.createElement('div');
+    const angle=(i/10)*Math.PI*2,dist=36+Math.random()*28;
+    const dx=Math.cos(angle)*dist,dy=Math.sin(angle)*dist;
+    const sz=4+Math.random()*4;
+    p.style.cssText=`position:absolute;width:${sz}px;height:${sz}px;border-radius:50%;background:${colors[i%colors.length]};left:${cx}px;top:${cy}px;pointer-events:none;z-index:9997;`;
+    tbl.appendChild(p);
+    requestAnimationFrame(()=>{
+      p.style.transition='transform .55s ease-out, opacity .55s ease-out';
+      p.style.transform=`translate(${dx}px,${dy}px)`;
+      p.style.opacity='0';
+    });
+    setTimeout(()=>p.remove(),650);
+  }
+}
+function spawnConfetti(){
+  const colors=['#f7d060','#4ade80','#60a5fa','#fb7185','#a78bfa','#fbbf24','#f97316'];
+  for(let i=0;i<70;i++){
+    const c=document.createElement('div');
+    c.className='confetti-piece';
+    const sz=4+Math.random()*7;
+    c.style.cssText=`width:${sz}px;height:${sz*(Math.random()>.5?.4:1)}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${Math.random()*100}vw;top:-12px;border-radius:${Math.random()>.5?'50%':'2px'};`;
+    document.body.appendChild(c);
+    const dur=1800+Math.random()*2000,delay=Math.random()*1200;
+    c.animate([
+      {transform:'translateY(0) rotate(0deg)',opacity:1},
+      {transform:`translateY(105vh) rotate(${Math.random()*720-360}deg)`,opacity:.2}
+    ],{duration:dur,delay,easing:'ease-in',fill:'forwards'});
+    setTimeout(()=>c.remove(),dur+delay+200);
+  }
+}
 
 // ── TIDY TABLE ───────────────────────────────────────────────────────────────
 function tidyCards(){
