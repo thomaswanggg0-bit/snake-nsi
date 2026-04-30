@@ -160,12 +160,23 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 /* ── VICTOIRE STATS ── */
 #victory-stats{font-size:14px;color:#86efac;letter-spacing:.5px;margin-top:4px;}
 #tooltip .tt-sell{color:#fbbf24;font-size:11px;margin-top:5px;border-top:1px solid rgba(255,255,255,.08);padding-top:4px;}
+/* ── SCORE FINAL ── */
+.final-score{font-size:28px;font-weight:900;color:#f7d060;margin:6px 0;text-shadow:0 0 20px rgba(247,208,96,.5);}
+.score-breakdown{font-size:12px;color:#94a3b8;margin-top:4px;line-height:1.8;}
+/* ── DIFFICULTÉ ── */
+.diff-selector{display:flex;gap:10px;justify-content:center;margin-bottom:2px;}
+.diff-btn{background:#0f2310;color:#6b8;border:2px solid #2d5a2d;border-radius:9px;padding:10px 28px;cursor:pointer;font-size:14px;font-weight:700;transition:all .15s;width:140px;}
+.diff-btn.active-normal{border-color:#16a34a;color:#4ade80;background:#0d2a1a;}
+.diff-btn.active-hard{border-color:#ef4444;color:#fca5a5;background:#2a0a0a;box-shadow:0 0 12px rgba(239,68,68,.3);}
+.diff-btn:hover{opacity:.8;}
+#hdiff{font-size:11px;font-weight:800;color:#ef4444;letter-spacing:1px;margin-left:4px;vertical-align:middle;display:none;}
+.mm-diff-note{font-size:11px;color:#6b7280;text-align:center;min-height:16px;}
 </style>
 </head>
 <body>
 <!-- HUD -->
 <div id="hud">
-  <span class="stat">📅 Jour <b id="hday">1</b>/25</span>
+  <span class="stat">📅 Jour <b id="hday">1</b>/25<span id="hdiff">💀 HARD</span></span>
   <div id="moon-wrap"><div id="moon-fill"></div></div>
   <span class="stat">🪙 <b id="hgold">5</b></span>
   <span class="stat" id="hfood-wrap">🍖 <b id="hfood">0</b>/<b id="hpop">0</b></span>
@@ -189,7 +200,10 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 <!-- Overlay Défaite / Famine -->
 <div class="overlay" id="overlay">
   <h2 id="over-title">☠️ Défaite !</h2>
-  <p id="over-msg"></p><p id="fscore"></p>
+  <p id="over-msg"></p>
+  <p id="fscore"></p>
+  <div class="final-score" id="over-score"></div>
+  <div class="score-breakdown" id="over-breakdown"></div>
   <div class="btn-row">
     <button class="obtn green" onclick="startNewGame()">🔄 Recommencer</button>
     <button class="obtn" onclick="showMainMenu()">🏠 Menu Principal</button>
@@ -201,6 +215,8 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <h2>🏆 Victoire !</h2>
   <p>Tu as survécu 25 jours et repoussé toutes les vagues !</p>
   <p id="vscore"></p>
+  <div class="final-score" id="vic-score"></div>
+  <div class="score-breakdown" id="vic-breakdown"></div>
   <p id="victory-stats"></p>
   <div class="btn-row">
     <button class="obtn green" onclick="startNewGame()">🔄 Rejouer</button>
@@ -289,6 +305,11 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <div class="mm-title">CARDSETTLER</div>
   <div class="mm-sub">Survive 25 jours, repousse les vagues</div>
   <div id="mm-stats"></div>
+  <div class="diff-selector">
+    <button class="diff-btn active-normal" id="diff-normal" onclick="setDifficulty('normal')">⚔️ Normal</button>
+    <button class="diff-btn" id="diff-hard" onclick="setDifficulty('hard')">💀 Difficile</button>
+  </div>
+  <div class="mm-diff-note" id="mm-diff-note">Mode Normal</div>
   <button class="mbtn" onclick="startNewGame()">🆕 Nouvelle Partie</button>
   <button class="mbtn" id="btn-resume" onclick="resumeGame()" disabled>▶ Reprendre la partie</button>
   <p id="resume-info"></p>
@@ -410,6 +431,19 @@ const PACKS = {
 
 const WIN_DAY=25, CW=82, CH=104, SO=24;
 let G={};
+let selectedDifficulty=localStorage.getItem('cs_difficulty')||'normal';
+const DIFF_PARAMS={
+  normal:{moonDur:60,aggroMult:1.0,foodPerPop:1,packCostAdd:0,scoreMult:1},
+  hard:  {moonDur:45,aggroMult:0.6,foodPerPop:2,packCostAdd:2,scoreMult:2},
+};
+function setDifficulty(d){
+  selectedDifficulty=d;localStorage.setItem('cs_difficulty',d);
+  document.getElementById('diff-normal').className='diff-btn'+(d==='normal'?' active-normal':'');
+  document.getElementById('diff-hard').className='diff-btn'+(d==='hard'?' active-hard':'');
+  const notes={normal:'Mode Normal — paramètres standards',hard:'💀 Difficile — jours courts, monstres rapides, double ration ×2 pack'};
+  document.getElementById('mm-diff-note').textContent=notes[d];
+  playSound('menu_click');
+}
 
 // ── AUDIO ────────────────────────────────────────────────────────────────────
 const AC=new(window.AudioContext||window.webkitAudioContext)();
@@ -513,6 +547,7 @@ function saveGame(){
   if(!G||!G.cards)return;
   const data={
     gold:G.gold, moon:G.moon, moonProg:G.moonProg, moonDur:G.moonDur, nid:G.nid,
+    difficulty:G.difficulty||'normal',
     _stats:G._stats||{},
     cards:Object.fromEntries(Object.entries(G.cards).map(([id,c])=>[id,{id:c.id,type:c.type,x:c.x,y:c.y,sid:c.sid,aggro:c.aggro||0}])),
     stacks:Object.fromEntries(Object.entries(G.stacks).map(([sid,s])=>[sid,{id:s.id,ids:[...s.ids],rx:s.rx,ry:s.ry}]))
@@ -529,7 +564,12 @@ function loadGame(){
   G={gold:data.gold,moon:data.moon,moonProg:data.moonProg,moonDur:data.moonDur,nid:data.nid,
      cards:{},stacks:{},drag:null,ts:null,over:false,paused:false,secretReveal:false,
      _stats:data._stats||{crafts:0,kills:0,sells:0,blocks:0,babies:0},
-     _faminWarned:false,_unlockedPacks:new Set(),speed:1,blackMarket:null};
+     _faminWarned:false,_unlockedPacks:new Set(),speed:1,blackMarket:null,
+     difficulty:data.difficulty||'normal',
+     aggroMult:(DIFF_PARAMS[data.difficulty||'normal']||DIFF_PARAMS.normal).aggroMult,
+     foodPerPop:(DIFF_PARAMS[data.difficulty||'normal']||DIFF_PARAMS.normal).foodPerPop,
+     packCostAdd:(DIFF_PARAMS[data.difficulty||'normal']||DIFF_PARAMS.normal).packCostAdd,
+     scoreMult:(DIFF_PARAMS[data.difficulty||'normal']||DIFF_PARAMS.normal).scoreMult};
   document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
   document.getElementById('log').innerHTML='';
   ['overlay','victory','pause','main-menu'].forEach(id=>document.getElementById(id).style.display='none');
@@ -561,7 +601,8 @@ function buildShop(){
   for(const [key,p] of Object.entries(PACKS)){
     const btn=document.createElement('button');
     btn.className='pbtn';btn.id='b-'+key;btn.onclick=()=>buyPack(key);
-    btn.innerHTML=p.n+' — '+p.cost+'🪙<small>'+p.hint+'</small>';
+    const dispCost=p.cost+(G.packCostAdd||0);
+    btn.innerHTML=p.n+' — '+dispCost+'🪙<small>'+p.hint+'</small>';
     btn.style.display=(p.unlock>0)?'none':'block';
     el.appendChild(btn);
   }
@@ -569,7 +610,8 @@ function buildShop(){
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 function initG(){
-  G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false,secretReveal:false,_stats:{crafts:0,kills:0,sells:0,blocks:0,babies:0},_faminWarned:false,_unlockedPacks:new Set(),speed:1,blackMarket:null};
+  const dp=DIFF_PARAMS[selectedDifficulty]||DIFF_PARAMS.normal;
+  G={gold:5,moon:1,moonProg:0,moonDur:dp.moonDur,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false,secretReveal:false,_stats:{crafts:0,kills:0,sells:0,blocks:0,babies:0},_faminWarned:false,_unlockedPacks:new Set(),speed:1,blackMarket:null,difficulty:selectedDifficulty,aggroMult:dp.aggroMult,foodPerPop:dp.foodPerPop,packCostAdd:dp.packCostAdd,scoreMult:dp.scoreMult};
   const sb=document.getElementById('speed-btn');if(sb){sb.textContent='⏩ ×1';sb.className='';sb.id='speed-btn';}
   const bb=document.getElementById('bm-btn');if(bb)bb.style.display='none';
   document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
@@ -825,7 +867,8 @@ function loop(ts){
     G._faminWarned=true;
     const pop=countT('villager')+countT('baby');
     const food=Object.values(G.cards).filter(c=>CD[c.type]?.food).reduce((s,c)=>s+(CD[c.type].food||0),0);
-    if(food<pop&&pop>0){log('⚠️ Famine proche ! Il faut '+pop+' repas, tu en as '+food+' !');playSound('error');}
+    const needed2=pop*(G.foodPerPop||1);
+    if(food<needed2&&pop>0){log('⚠️ Famine proche ! Il faut '+needed2+' repas, tu en as '+food+' !');playSound('error');}
   }
   if(G.moonProg>=1){G.moonProg=0;G.moon++;G._faminWarned=false;endMoon();if(G.over)return;}
   document.getElementById('moon-fill').style.width=(G.moonProg*100)+'%';
@@ -846,14 +889,15 @@ function loop(ts){
     const inCombat=c.sid&&G.stacks[c.sid]?.recipe;
     const el=cel(id);
     if(!inCombat){
-      c.aggro=(c.aggro||0)+dt;const pct=c.aggro/d.aggroMax;
+      const effMax=d.aggroMax*(G.aggroMult||1);
+      c.aggro=(c.aggro||0)+dt;const pct=c.aggro/effMax;
       if(el){
         const bar=el.querySelector('.card-bar'),fill=el.querySelector('.card-bar-fill');
         if(bar)bar.style.display='block';
         if(fill){fill.style.background='#ef4444';fill.style.width=Math.min(pct*100,100)+'%';}
         if(pct>=.7)el.classList.add('danger-pulse');else el.classList.remove('danger-pulse');
       }
-      if(c.aggro>=d.aggroMax)toAttack.push(id);
+      if(c.aggro>=effMax)toAttack.push(id);
     }else{if(el)el.classList.remove('danger-pulse');}
   }
   toAttack.forEach(id=>{if(G.cards[id])monsterAttack(id);});
@@ -870,10 +914,11 @@ function endMoon(){
   if(pop>0){
     const fCards=Object.values(G.cards).filter(c=>CD[c.type]?.food).sort((a,b)=>(CD[b.type].food||0)-(CD[a.type].food||0));
     const total=fCards.reduce((s,c)=>s+(CD[c.type].food||0),0);
-    if(total<pop){G.over=true;showOverFamine();return;}
-    let need=pop;
+    const needed=pop*(G.foodPerPop||1);
+    if(total<needed){G.over=true;showOverFamine();return;}
+    let need=needed;
     for(const fc of fCards){if(need<=0)break;if(fc.sid)rmFromStack(fc.id);delCard(fc.id);need-=CD[fc.type].food;}
-    log('🌙 Jour '+G.moon+' — '+pop+' villageois nourris !');
+    log('🌙 Jour '+G.moon+' — '+pop+' villageois nourris'+(G.foodPerPop>1?' (×'+G.foodPerPop+' en difficile)':'')+'!');
   }else{log('🌙 Jour '+G.moon);}
   if(G.moon%5===0)spawnWave();
   Object.entries(PACKS).forEach(([k,p])=>{
@@ -900,8 +945,10 @@ function countT(t){return Object.values(G.cards).filter(c=>c.type===t).length;}
 
 // ── PACKS ────────────────────────────────────────────────────────────────────
 function buyPack(key){
-  const p=PACKS[key];if(!p||G.gold<p.cost)return;
-  G.gold-=p.cost;
+  const p=PACKS[key];if(!p)return;
+  const cost=p.cost+(G.packCostAdd||0);
+  if(G.gold<cost)return;
+  G.gold-=cost;
   const tbl=document.getElementById('table').getBoundingClientRect();
   const cx=tbl.width/2,cy=tbl.height/2;
   for(let i=0;i<p.cnt;i++){
@@ -928,7 +975,9 @@ function updateHUD(){
   if(food<pop&&pop>0)foodWrap.classList.add('famine-warn');else foodWrap.classList.remove('famine-warn');
   const nextWave=G.moon%5===0?G.moon+5:Math.ceil(G.moon/5)*5;
   document.getElementById('obj').textContent='⚔️ Vague J'+Math.min(nextWave,WIN_DAY)+' | 🎯 Objectif : J'+WIN_DAY;
-  Object.keys(PACKS).forEach(k=>{const b=document.getElementById('b-'+k);if(b)b.disabled=G.gold<PACKS[k].cost;});
+  const hdiff=document.getElementById('hdiff');
+  if(hdiff)hdiff.style.display=G.difficulty==='hard'?'inline':'none';
+  Object.keys(PACKS).forEach(k=>{const b=document.getElementById('b-'+k);if(b)b.disabled=G.gold<(PACKS[k].cost+(G.packCostAdd||0));});
 }
 
 // ── LOG ───────────────────────────────────────────────────────────────────────
@@ -938,11 +987,27 @@ function log(msg){
 }
 
 // ── OVERLAYS ──────────────────────────────────────────────────────────────────
+function calcScore(){
+  const s=G._stats||{};
+  const pop=countT('villager')+countT('baby');
+  const base=G.moon*100;
+  const bonus=(s.crafts||0)*15+(s.kills||0)*20+(s.expeditions||0)*30+pop*50;
+  return Math.round((base+bonus)*(G.scoreMult||1));
+}
+function scoreBreakdown(){
+  const s=G._stats||{};
+  const pop=countT('villager')+countT('baby');
+  const mult=G.scoreMult||1;
+  return `📅 ${G.moon} jours ×100  |  ⚒️ ${s.crafts||0} crafts ×15  |  💀 ${s.kills||0} kills ×20  |  ⛏️ ${s.expeditions||0} expéditions ×30  |  👥 ${pop} survivants ×50${mult>1?' | 💀 ×'+mult+' (Difficile)':''}`;
+}
 function showOverFamine(){
   updateGlobalStats(false);
   document.getElementById('over-title').textContent='☠️ Famine !';
   document.getElementById('over-msg').textContent='Tes villageois sont morts de faim.';
   document.getElementById('fscore').textContent='Tu as survécu '+G.moon+' jours.';
+  const sc=calcScore();
+  document.getElementById('over-score').textContent='Score : '+sc.toLocaleString();
+  document.getElementById('over-breakdown').textContent=scoreBreakdown();
   document.getElementById('overlay').style.display='flex';
 }
 function showOverMonster(){
@@ -950,6 +1015,9 @@ function showOverMonster(){
   document.getElementById('over-title').textContent='💀 Défaite !';
   document.getElementById('over-msg').textContent='Tous tes villageois ont été tués par des monstres.';
   document.getElementById('fscore').textContent='Tu as survécu '+G.moon+' jours.';
+  const sc=calcScore();
+  document.getElementById('over-score').textContent='Score : '+sc.toLocaleString();
+  document.getElementById('over-breakdown').textContent=scoreBreakdown();
   document.getElementById('overlay').style.display='flex';
 }
 function showVictory(){
@@ -958,7 +1026,10 @@ function showVictory(){
     const a=ACHIEVEMENTS.find(a=>a.id==='victory_u');if(a)setTimeout(()=>showAchievementToast(a),800);
   }
   playSound('victory');
+  const sc=calcScore();
   document.getElementById('vscore').textContent='Tu as repoussé toutes les vagues et survécu '+WIN_DAY+' jours !';
+  document.getElementById('vic-score').textContent='Score : '+sc.toLocaleString();
+  document.getElementById('vic-breakdown').textContent=scoreBreakdown();
   document.getElementById('victory-stats').textContent='⚒️ '+(G._stats?.crafts||0)+' crafts  |  💀 '+(G._stats?.kills||0)+' monstres  |  🏅 '+getAchievements().length+'/'+ACHIEVEMENTS.length+' succès';
   document.getElementById('victory').style.display='flex';
   spawnConfetti();
