@@ -115,6 +115,9 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 .ach-toast.out{animation:toastOut .4s ease forwards;}
 .ach-toast small{display:block;font-size:11px;font-weight:400;opacity:.8;margin-top:2px;}
 #mm-stats{color:#4ade80;font-size:12px;text-align:center;max-width:340px;line-height:1.7;min-height:18px;}
+@keyframes famine-blink{0%,100%{color:#fca5a5}50%{color:#ef4444;text-shadow:0 0 8px rgba(239,68,68,.7);}}
+.famine-warn{animation:famine-blink .7s infinite;}
+#tooltip .tt-sell{color:#fbbf24;font-size:11px;margin-top:5px;border-top:1px solid rgba(255,255,255,.08);padding-top:4px;}
 </style>
 </head>
 <body>
@@ -127,6 +130,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <span id="obj"></span>
   <span id="save-badge">💾</span>
   <button onclick="showRB()" style="background:#1a4a1a;color:#8f8;border:1px solid #4a8a4a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">📖 Recettes</button>
+  <button onclick="tidyCards()" style="background:#1a2a4a;color:#93c5fd;border:1px solid #2d4a8a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">🗂️ Ranger</button>
   <span style="color:#666;font-size:11px;">Clic-droit=vendre | Échap=Pause</span>
 </div>
 
@@ -134,7 +138,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 <div id="table"><div id="wave-alert"></div></div>
 <div id="shop"></div>
 <div id="log"></div>
-<div id="tooltip"><div class="tt-name"></div><div class="tt-desc"></div><div class="tt-label"></div><div class="tt-r"></div></div>
+<div id="tooltip"><div class="tt-name"></div><div class="tt-desc"></div><div class="tt-label"></div><div class="tt-r"></div><div class="tt-sell"></div></div>
 
 <!-- Overlay Défaite / Famine -->
 <div class="overlay" id="overlay">
@@ -425,6 +429,9 @@ function showTooltip(e,type){
       r.i.map(t=>CD[t]?.e||t).join('+')+' → '+r.o.map(t=>CD[t]?.e||t).join(',')+'<span style="color:#888"> ('+r.t+'s'+(r.rep?' 🔄':'')+')</span>'
     ).join('<br>');
   }else{ttEl.querySelector('.tt-label').textContent='';ttEl.querySelector('.tt-r').textContent='';}
+  const sellEl=ttEl.querySelector('.tt-sell');
+  if(!d.node&&!d.monster){const val=d.sellValue||1;sellEl.textContent='💰 Vente : '+val+'🪙 (clic droit)';}
+  else{sellEl.textContent='';}
   ttEl.style.display='block';posTooltip(e);
 }
 function posTooltip(e){
@@ -454,7 +461,8 @@ function loadGame(){
   const data=JSON.parse(raw);
   G={gold:data.gold,moon:data.moon,moonProg:data.moonProg,moonDur:data.moonDur,nid:data.nid,
      cards:{},stacks:{},drag:null,ts:null,over:false,paused:false,secretReveal:false,
-     _stats:data._stats||{crafts:0,kills:0,sells:0,blocks:0,babies:0}};
+     _stats:data._stats||{crafts:0,kills:0,sells:0,blocks:0,babies:0},
+     _faminWarned:false,_unlockedPacks:new Set()};
   document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
   document.getElementById('log').innerHTML='';
   ['overlay','victory','pause','main-menu'].forEach(id=>document.getElementById(id).style.display='none');
@@ -470,9 +478,9 @@ function loadGame(){
     s.ids.forEach(cid=>{if(G.cards[cid])G.cards[cid].sid=s.id;});
     updateSV(s.id); checkRecipe(s.id);
   });
-  // Débloquer paquets
+  // Débloquer paquets (silencieux au chargement)
   Object.entries(PACKS).forEach(([k,p])=>{
-    if(p.unlock>0&&G.moon>=p.unlock){const b=document.getElementById('b-'+k);if(b)b.style.display='block';}
+    if(p.unlock>0&&G.moon>=p.unlock){const b=document.getElementById('b-'+k);if(b)b.style.display='block';G._unlockedPacks.add(k);}
   });
   updateHUD();
   log('💾 Partie chargée — Jour '+G.moon);
@@ -494,7 +502,7 @@ function buildShop(){
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 function initG(){
-  G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false,secretReveal:false,_stats:{crafts:0,kills:0,sells:0,blocks:0,babies:0}};
+  G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false,secretReveal:false,_stats:{crafts:0,kills:0,sells:0,blocks:0,babies:0},_faminWarned:false,_unlockedPacks:new Set()};
   document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
   document.getElementById('log').innerHTML='';
   ['overlay','victory','pause','main-menu'].forEach(id=>document.getElementById(id).style.display='none');
@@ -723,7 +731,13 @@ function loop(ts){
   if(!G.ts)G.ts=ts;
   const dt=(ts-G.ts)/1000;G.ts=ts;
   G.moonProg+=dt/G.moonDur;
-  if(G.moonProg>=1){G.moonProg=0;G.moon++;endMoon();if(G.over)return;}
+  if(G.moonProg>=.8&&!G._faminWarned){
+    G._faminWarned=true;
+    const pop=countT('villager')+countT('baby');
+    const food=Object.values(G.cards).filter(c=>CD[c.type]?.food).reduce((s,c)=>s+(CD[c.type].food||0),0);
+    if(food<pop&&pop>0){log('⚠️ Famine proche ! Il faut '+pop+' repas, tu en as '+food+' !');playSound('error');}
+  }
+  if(G.moonProg>=1){G.moonProg=0;G.moon++;G._faminWarned=false;endMoon();if(G.over)return;}
   document.getElementById('moon-fill').style.width=(G.moonProg*100)+'%';
   const toExec=[];
   for(const [sidStr,s] of Object.entries(G.stacks)){
@@ -768,7 +782,10 @@ function endMoon(){
   }else{log('🌙 Jour '+G.moon);}
   if(G.moon%5===0)spawnWave();
   Object.entries(PACKS).forEach(([k,p])=>{
-    if(p.unlock>0&&G.moon>=p.unlock){const b=document.getElementById('b-'+k);if(b)b.style.display='block';}
+    if(p.unlock>0&&G.moon>=p.unlock){
+      const b=document.getElementById('b-'+k);if(b)b.style.display='block';
+      if(!G._unlockedPacks.has(k)){G._unlockedPacks.add(k);showPackUnlockToast(p);}
+    }
   });
   checkAchievements();
   // Auto-save
@@ -804,7 +821,9 @@ function updateHUD(){
   document.getElementById('hgold').textContent=G.gold;
   document.getElementById('hfood').textContent=food;
   document.getElementById('hpop').textContent=pop;
-  document.getElementById('hfood-wrap').style.color=food>=pop?'#86efac':'#fca5a5';
+  const foodWrap=document.getElementById('hfood-wrap');
+  foodWrap.style.color=food>=pop?'#86efac':'#fca5a5';
+  if(food<pop&&pop>0)foodWrap.classList.add('famine-warn');else foodWrap.classList.remove('famine-warn');
   const nextWave=G.moon%5===0?G.moon+5:Math.ceil(G.moon/5)*5;
   document.getElementById('obj').textContent='⚔️ Vague J'+Math.min(nextWave,WIN_DAY)+' | 🎯 Objectif : J'+WIN_DAY;
   Object.keys(PACKS).forEach(k=>{const b=document.getElementById('b-'+k);if(b)b.disabled=G.gold<PACKS[k].cost;});
@@ -926,6 +945,36 @@ function showRB(){
   document.getElementById('rb').style.display='flex';
 }
 function closeRB(){document.getElementById('rb').style.display='none';}
+
+// ── TIDY TABLE ───────────────────────────────────────────────────────────────
+function tidyCards(){
+  if(G.over||G.paused)return;
+  const tbl=document.getElementById('table').getBoundingClientRect();
+  const pad=16,gapX=CW+16,gapY=CH+44;
+  const cols=Math.max(1,Math.floor((tbl.width-pad*2)/gapX));
+  const groups=[];const seen=new Set();
+  // Stacks first
+  for(const [sid,s] of Object.entries(G.stacks)){groups.push({type:'stack',sid:parseInt(sid)});s.ids.forEach(id=>seen.add(id));}
+  // Lone cards
+  for(const [id,c] of Object.entries(G.cards)){if(!seen.has(parseInt(id)))groups.push({type:'card',id:parseInt(id)});}
+  groups.forEach((g,i)=>{
+    const col=i%cols,row=Math.floor(i/cols);
+    const nx=pad+col*gapX,ny=pad+row*gapY;
+    if(g.type==='stack'){const s=G.stacks[g.sid];if(!s)return;s.rx=nx;s.ry=ny;updateSV(g.sid);}
+    else{G.cards[g.id].x=nx;G.cards[g.id].y=ny;updateCV(g.id);}
+  });
+  playSound('menu_click');log('🗂️ Table rangée !');
+}
+
+// ── PACK UNLOCK TOAST ────────────────────────────────────────────────────────
+function showPackUnlockToast(pack){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;right:16px;top:72px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;z-index:99900;box-shadow:0 4px 16px rgba(0,0,0,.5);border:1px solid #60a5fa;max-width:260px;animation:toastIn .4s ease forwards;';
+  t.innerHTML='📦 Nouveau paquet débloqué !<small style="display:block;font-size:11px;font-weight:400;opacity:.8;margin-top:2px;">'+pack.n+' — '+pack.hint+'</small>';
+  document.body.appendChild(t);
+  playSound('buy_pack');
+  setTimeout(()=>{t.style.animation='toastOut .4s ease forwards';setTimeout(()=>t.remove(),400);},3500);
+}
 
 // ── ACHIEVEMENTS ─────────────────────────────────────────────────────────────
 const ACHIEVEMENTS=[
