@@ -115,6 +115,8 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 .ach-toast.out{animation:toastOut .4s ease forwards;}
 .ach-toast small{display:block;font-size:11px;font-weight:400;opacity:.8;margin-top:2px;}
 #mm-stats{color:#4ade80;font-size:12px;text-align:center;max-width:340px;line-height:1.7;min-height:18px;}
+@keyframes expedition-pulse{0%,100%{box-shadow:0 0 0 2px rgba(139,92,246,.8),0 3px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 0 6px rgba(139,92,246,1),0 0 22px rgba(139,92,246,.6)}}
+.expedition-active{animation:expedition-pulse .9s infinite;border-color:rgba(139,92,246,.8)!important;}
 @keyframes famine-blink{0%,100%{color:#fca5a5}50%{color:#ef4444;text-shadow:0 0 8px rgba(239,68,68,.7);}}
 .famine-warn{animation:famine-blink .7s infinite;}
 /* ── SPAWN CARTE ── */
@@ -286,6 +288,8 @@ const CD = {
   wolf:         {n:'Loup',        e:'🐺', bg:'#374151',c:'#f9fafb',monster:1,aggroMax:15,desc:'Attaque dans 15s'},
   goblin:       {n:'Gobelin',     e:'👺', bg:'#4c1d95',c:'#f5f3ff',monster:1,aggroMax:12,desc:'Attaque dans 12s. Laisse de l\'Or'},
   troll:        {n:'Troll',       e:'👹', bg:'#7f1d1d',c:'#fef2f2',monster:1,aggroMax:10,desc:'Attaque dans 10s. Résistant'},
+  gem:          {n:'Gemme',          e:'🔮', bg:'#ede9fe',c:'#5b21b6', sellValue:3, desc:'Pierre précieuse. Vaut 3🪙 à la vente'},
+  cave_entrance:{n:'Entrée Grotte',  e:'🕳️', bg:'#0f172a',c:'#94a3b8', node:1, desc:'Empile 1-3 🧑 + ⚔️/🗡️ → Expédition (40s). Plus d\'épées = meilleur butin !'},
   // Cartes secrètes
   elixir:       {n:'Élixir Vital',    e:'🧪', bg:'#d1fae5',c:'#065f46', food:10, secret:1, desc:'Nourriture : +10', sdesc:'Un élixir magique qui nourrit instantanément tout ton village.', skeep:'Garde-le pour une urgence de famine, ou utilise-le quand tu as beaucoup de villageois.', sbonus:'Nourrit 10 villageois en une seule fois !'},
   golden_bar:   {n:'Lingot d\'Or',    e:'💛', bg:'#fef9c3',c:'#a16207', sellValue:8, secret:1, desc:'Vaut 8 pièces à la vente', sdesc:'Un lingot d\'or pur forgé par alchimie.', skeep:'Revends-le immédiatement (clic droit) pour 8 pièces d\'or !', sbonus:'8× la valeur d\'une carte normale (1 pièce)'},
@@ -321,6 +325,7 @@ const RECIPES = [
   {i:['iron_sword','goblin'],        o:['gold'],        keep:['iron_sword'],       t:3,  rep:0, d:'🗡️ Épée de Fer + Gobelin → Or'},
   {i:['iron_sword','troll'],         o:['gold','gold'], keep:['iron_sword'],       t:5,  rep:0, d:'🗡️ Épée de Fer + Troll → 2 Or'},
   {i:['bone','bone','bone'],         o:['gold'],        keep:[],                   t:4,  rep:0, d:'3 Os → Or'},
+  {i:['stone','stone','stone','stone','villager'], o:['cave_entrance'], keep:['villager'], t:12, rep:0, d:'4 Pierres + Villageois → Entrée de Grotte'},
   // Cartes secrètes (cachées dans le livre de recettes)
   {i:['apple','berry','berry','campfire'],              o:['elixir'],      keep:['campfire'], t:8,  rep:0, secret:1, d:'🧪 Pomme + 2 Baies + Feu → Élixir Vital'},
   {i:['campfire','iron_ore','iron_ore','iron_ore'],     o:['golden_bar'],  keep:['campfire'], t:6,  rep:0, secret:1, d:'💛 Feu + 3 Minerais → Lingot d\'Or'},
@@ -355,9 +360,9 @@ const PACKS = {
     {t:'sword',w:30},{t:'plank',w:20},{t:'flint',w:20},
     {t:'stone',w:15},{t:'gold',w:15},{t:'bone',w:10},
   ]},
-  explor:{n:'Paquet Exploration', cost:7, cnt:4, unlock:8, hint:'🌿 ⛰️ 🔩 🟫', pool:[
-    {t:'forest_zone',w:25},{t:'cave_zone',w:20},{t:'iron_ore',w:30},
-    {t:'plank',w:20},{t:'stone',w:15},{t:'gold',w:10},
+  explor:{n:'Paquet Exploration', cost:7, cnt:4, unlock:8, hint:'🌿 ⛰️ 🔩 🔮', pool:[
+    {t:'forest_zone',w:25},{t:'cave_zone',w:20},{t:'iron_ore',w:28},
+    {t:'plank',w:18},{t:'stone',w:14},{t:'gold',w:10},{t:'gem',w:7},{t:'cave_entrance',w:5},
   ]},
 };
 
@@ -440,7 +445,10 @@ function showTooltip(e,type){
   ttEl.querySelector('.tt-name').textContent=d.e+' '+d.n;
   ttEl.querySelector('.tt-desc').textContent=d.desc||'';
   const uses=RECIPES.filter(r=>r.i.includes(type)&&!r.secret);
-  if(uses.length>0){
+  if(type==='cave_entrance'){
+    ttEl.querySelector('.tt-label').textContent='Expédition (40s) :';
+    ttEl.querySelector('.tt-r').innerHTML='🧑 → minerais/flint/gemmes (risque !)<br>🧑+⚔️ → gemmes/or/lingots (sûr)<br>🧑🧑+⚔️⚔️ → butin rare + chance pierre philo<br><span style="color:#888">Max 3 villageois / 2 épées</span>';
+  }else if(uses.length>0){
     ttEl.querySelector('.tt-label').textContent='Recettes :';
     ttEl.querySelector('.tt-r').innerHTML=uses.slice(0,4).map(r=>
       r.i.map(t=>CD[t]?.e||t).join('+')+' → '+r.o.map(t=>CD[t]?.e||t).join(',')+'<span style="color:#888"> ('+r.t+'s'+(r.rep?' 🔄':'')+')</span>'
@@ -607,10 +615,22 @@ function checkRecipe(sid){
   for(const r of RECIPES){
     if(arrEq(types,[...r.i].sort())){if(!s.recipe)playSound('craft_start');s.recipe=r;s.prog=0;updateSV(sid);return;}
   }
+  // Détection expédition : cave_entrance + 1-3 villageois + 0-2 épées
+  if(types.includes('cave_entrance')){
+    const vCount=types.filter(t=>t==='villager').length;
+    const sCount=types.filter(t=>t==='sword'||t==='iron_sword').length;
+    const others=types.filter(t=>t!=='cave_entrance'&&t!=='villager'&&t!=='sword'&&t!=='iron_sword');
+    if(vCount>=1&&vCount<=3&&sCount<=2&&others.length===0){
+      if(!s.recipe)playSound('craft_start');
+      s.recipe={type:'expedition',t:40,vCount,sCount,keep:[]};
+      s.prog=0;updateSV(sid);return;
+    }
+  }
   s.recipe=null;updateSV(sid);
 }
 function execRecipe(sid){
   const s=G.stacks[sid];if(!s||!s.recipe)return;
+  if(s.recipe.type==='expedition'){execExpedition(sid);return;}
   const r=s.recipe,rx=s.rx,ry=s.ry;
   const keepQ=[...r.keep],kept=[],gone=[];
   s.ids.forEach(cid=>{const t=G.cards[cid].type,ki=keepQ.indexOf(t);
@@ -652,6 +672,7 @@ function execRecipe(sid){
 function startDrag(e,id){
   if(G.over||G.paused)return;hideTooltip();
   const c=G.cards[id],el=cel(id);if(!el)return;
+  if(c.sid&&G.stacks[c.sid]?.recipe?.type==='expedition')return;
   const tr=document.getElementById('table').getBoundingClientRect(),er=el.getBoundingClientRect();
   if(c.sid)rmFromStack(id);
   G.drag={id,ox:e.clientX-er.left,oy:e.clientY-er.top,tl:tr.left,tt:tr.top};
@@ -718,7 +739,7 @@ function monsterAttack(mid){
     playSound('shield_block');log('🛡️ Bouclier : '+mName+' bloqué !');updateHUD();return;
   }
   playSound('monster_attack');
-  const villagers=Object.values(G.cards).filter(c=>c.type==='villager');
+  const villagers=Object.values(G.cards).filter(c=>c.type==='villager'&&(!c.sid||G.stacks[c.sid]?.recipe?.type!=='expedition'));
   if(villagers.length>0){
     const v=villagers[0];if(v.sid)rmFromStack(v.id);delCard(v.id);
     log('💀 Le '+mName+' a tué un villageois !');
@@ -762,8 +783,11 @@ function loop(ts){
   const toExec=[];
   for(const [sidStr,s] of Object.entries(G.stacks)){
     if(!s.recipe)continue;s.prog+=dt/s.recipe.t;
-    const fill=cel(s.ids[0])?.querySelector('.card-bar-fill');
-    if(fill){fill.style.background='#4ade80';fill.style.width=(Math.min(s.prog,1)*100)+'%';}
+    const isExp=s.recipe.type==='expedition';
+    const rootEl=cel(s.ids[0]);
+    if(rootEl){isExp?rootEl.classList.add('expedition-active'):rootEl.classList.remove('expedition-active');}
+    const fill=rootEl?.querySelector('.card-bar-fill');
+    if(fill){fill.style.background=isExp?'#8b5cf6':'#4ade80';fill.style.width=(Math.min(s.prog,1)*100)+'%';}
     if(s.prog>=1){s.prog=0;toExec.push(parseInt(sidStr));}
   }
   toExec.forEach(sid=>{if(G.stacks[sid])execRecipe(sid);});
@@ -970,6 +994,71 @@ function showRB(){
 }
 function closeRB(){document.getElementById('rb').style.display='none';}
 
+// ── EXPÉDITION ───────────────────────────────────────────────────────────────
+function execExpedition(sid){
+  const s=G.stacks[sid];if(!s||!s.recipe)return;
+  const {vCount,sCount}=s.recipe;
+  const rx=s.rx,ry=s.ry;
+  const caveId=s.ids.find(id=>G.cards[id]?.type==='cave_entrance');
+  const villagerIds=s.ids.filter(id=>G.cards[id]?.type==='villager');
+  const swordIds=s.ids.filter(id=>['sword','iron_sword'].includes(G.cards[id]?.type));
+  const hasIronSword=swordIds.some(id=>G.cards[id]?.type==='iron_sword');
+  // Risque : sans épée, 25% chance de perdre un villageois
+  let deadId=null;
+  if(sCount===0&&Math.random()<.25)deadId=villagerIds[0]||null;
+  const returnIds=[...villagerIds,...swordIds].filter(id=>id!==deadId);
+  // Nettoyer la pile
+  s.ids.forEach(id=>{if(G.cards[id])G.cards[id].sid=null;});
+  dissolve(sid);
+  const caveEl=cel(caveId);if(caveEl)caveEl.classList.remove('expedition-active');
+  // Repositionner la grotte
+  if(caveId&&G.cards[caveId]){G.cards[caveId].x=rx;G.cards[caveId].y=ry;updateCV(caveId);}
+  // Supprimer le villageois mort
+  if(deadId)delCard(deadId);
+  // Retourner les autres
+  returnIds.forEach((id,i)=>{if(G.cards[id]){G.cards[id].x=rx+(CW+12);G.cards[id].y=ry+i*SO;updateCV(id);}});
+  // Butin
+  const loot=generateExpeditionLoot(vCount,sCount,hasIronSword);
+  loot.forEach((type,i)=>{spawn(type,rx+(i%4)*(CW+10),ry+CH+48+Math.floor(i/4)*(CH+10));});
+  spawnParticles(rx,ry);
+  G._stats.expeditions=(G._stats.expeditions||0)+1;
+  if(deadId){
+    log('⛏️ Expédition : un villageois n\'est pas revenu... Butin : '+loot.map(t=>CD[t].e).join(' '));
+    playSound('monster_attack');
+    if(countT('villager')+countT('baby')===0){G.over=true;showOverMonster();return;}
+  }else{
+    log('⛏️ Expédition terminée ! Butin : '+loot.map(t=>CD[t].e+' '+CD[t].n).join(', '));
+    playSound('craft_done');
+  }
+  checkAchievements();updateHUD();
+}
+function generateExpeditionLoot(vCount,sCount,hasIronSword){
+  const loot=[];
+  const power=vCount+(sCount*(hasIronSword?2:1.5));
+  const rolls=Math.max(1,Math.round(power));
+  for(let i=0;i<rolls;i++){
+    const r=Math.random();
+    if(sCount>0){
+      if(r<.28)loot.push('iron_ore');
+      else if(r<.50)loot.push('gem');
+      else if(r<.68)loot.push('gold');
+      else if(r<.80)loot.push('bone');
+      else if(r<.90)loot.push('stone');
+      else if(r<.97)loot.push('golden_bar');
+      else loot.push('gem');
+    }else{
+      if(r<.45)loot.push('iron_ore');
+      else if(r<.65)loot.push('stone');
+      else if(r<.80)loot.push('flint');
+      else if(r<.93)loot.push('gem');
+      else loot.push('gold');
+    }
+  }
+  if(vCount>=2&&sCount>=1&&Math.random()<.18)loot.push('gem');
+  if(vCount>=2&&sCount>=2&&Math.random()<.05)loot.push('phil_stone');
+  return loot.slice(0,7);
+}
+
 // ── PARTICLES & CONFETTI ─────────────────────────────────────────────────────
 function spawnParticles(x,y){
   const tbl=document.getElementById('table');if(!tbl)return;
@@ -1056,6 +1145,7 @@ const ACHIEVEMENTS=[
   {id:'day20_surv',    n:'Vingt Jours',            d:'Atteins le Jour 20',                  e:'📅'},
   {id:'victory_u',     n:'Légende',                d:'Termine la partie (25 jours)',        e:'🏆'},
   {id:'sell10_u',      n:'Marchand',               d:'Vends 10 cartes',                     e:'💰'},
+  {id:'expedition1',   n:'Explorateur',            d:'Complète ta première expédition',     e:'⛏️'},
   {id:'secret1',       n:'Découverte Secrète',     d:'Crafte ta première carte secrète',    e:'🔓'},
   {id:'all_secrets',   n:'Alchimiste',             d:'Découvre les 4 cartes secrètes',      e:'💎'},
 ];
@@ -1094,6 +1184,7 @@ function checkAchievements(){
   c('day10_surv',    G.moon>=10);
   c('day20_surv',    G.moon>=20);
   c('sell10_u',      (s.sells||0)>=10);
+  c('expedition1',   (s.expeditions||0)>=1);
 }
 function showAchOverlay(){
   const arr=getAchievements();
