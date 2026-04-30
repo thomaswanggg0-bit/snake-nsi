@@ -43,6 +43,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 /* Log */
 #log{position:absolute;bottom:12px;left:12px;z-index:100;max-width:240px;}
 .litem{background:rgba(0,0,0,.75);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;margin-bottom:4px;animation:fi .3s ease;}
+.litem.hint{background:rgba(15,30,60,.95);border:1px solid #3b82f6;color:#bfdbfe;padding:7px 12px;font-size:12px;}
 @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 /* Overlays jeu */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9000;justify-content:center;align-items:center;flex-direction:column;color:#fff;gap:12px;text-align:center;padding:20px;}
@@ -148,6 +149,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <span id="save-badge">💾</span>
   <button onclick="showRB()" style="background:#1a4a1a;color:#8f8;border:1px solid #4a8a4a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">📖 Recettes</button>
   <button onclick="tidyCards()" style="background:#1a2a4a;color:#93c5fd;border:1px solid #2d4a8a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">🗂️ Ranger</button>
+  <button onclick="showConseilPopup()" style="background:#1a1a0a;color:#fde68a;border:1px solid #78716c;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">💡 Conseil</button>
   <span style="color:#666;font-size:11px;">Clic-droit=vendre | Échap=Pause</span>
 </div>
 
@@ -187,6 +189,7 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <div class="btn-row">
     <button class="obtn green" onclick="togglePause()">▶ Reprendre</button>
     <button class="obtn" onclick="manualSave()">💾 Sauvegarder</button>
+    <button class="obtn" onclick="showConseilPopup()" style="background:#1a1a0a;border-color:#78716c;color:#fde68a;">💡 Conseil</button>
   </div>
   <div class="btn-row">
     <button class="obtn red" onclick="startNewGame()">🔄 Recommencer</button>
@@ -559,6 +562,7 @@ function spawn(type,x,y){
   const id=G.nid++;
   G.cards[id]={id,type,x,y,sid:null,aggro:0};
   createCardDOM(id,type);
+  checkFirstEncounter(type);
   return id;
 }
 function cel(id){return document.getElementById('c'+id);}
@@ -649,6 +653,10 @@ function execRecipe(sid){
   const killCount=goneTypes.filter(t=>CD[t]?.monster).length;
   if(killCount>0)G._stats.kills=(G._stats.kills||0)+killCount;
   if(r.o.includes('baby'))G._stats.babies=(G._stats.babies||0)+1;
+  if(r.o.includes('forge'))logHint('🔨 Forge prête ! Empile Forge + 2 Minerais + Villageois → 🗡️ Épée de Fer (combat 3× plus rapide !)');
+  if(r.o.includes('cave_entrance'))logHint('🕳️ Entrée de Grotte ! Empile 1-3 🧑 + une ⚔️ dessus pour lancer une expédition de 40s et ramener du butin !');
+  if(r.o.includes('house'))logHint('🏠 Maison construite ! Empile Maison + 2 Villageois pour avoir des Bébés → plus de main-d\'œuvre !');
+  if(r.o.includes('campfire')&&!hasSeenHint('campfire_tip')){markHintSeen('campfire_tip');logHint('🔥 Feu de camp ! Empile 🫐+🔥 → Baie cuite (×3 nourriture) ou 🍎+🔥 → Ragoût (×5 !)');}
   if(r.o.includes('sword'))G._stats.madeSword=true;
   if(r.o.includes('iron_sword'))G._stats.madeIronSword=true;
   if(r.o.includes('shield'))G._stats.madeShield=true;
@@ -993,6 +1001,76 @@ function showRB(){
   document.getElementById('rb').style.display='flex';
 }
 function closeRB(){document.getElementById('rb').style.display='none';}
+
+// ── HINTS CONTEXTUELS ────────────────────────────────────────────────────────
+function hasSeenHint(id){try{return JSON.parse(localStorage.getItem('stacklands_hints')||'[]').includes(id);}catch(e){return false;}}
+function markHintSeen(id){
+  try{const a=JSON.parse(localStorage.getItem('stacklands_hints')||'[]');
+    if(!a.includes(id)){a.push(id);localStorage.setItem('stacklands_hints',JSON.stringify(a));}}catch(e){}
+}
+function logHint(msg){
+  const d=document.getElementById('log'),el=document.createElement('div');
+  el.className='litem hint';el.textContent=msg;d.appendChild(el);
+  setTimeout(()=>el.remove(),9000);
+}
+function checkFirstEncounter(type){
+  if(type==='wolf'&&!hasSeenHint('wolf')){
+    markHintSeen('wolf');
+    logHint('🐺 Un Loup apparaît ! Empile une ⚔️ Épée dessus avant qu\'il attaque (15s). L\'épée survit au combat !');
+  }else if(type==='goblin'&&!hasSeenHint('goblin')){
+    markHintSeen('goblin');
+    logHint('👺 Premier Gobelin ! Plus rapide que le loup (12s). Il laisse de l\'Or en mourant — très précieux !');
+  }else if(type==='troll'&&!hasSeenHint('troll')){
+    markHintSeen('troll');
+    logHint('👹 Un Troll ! Impossible avec une seule épée — empile 2 ⚔️ ou utilise une 🗡️ Épée de Fer pour le battre seul !');
+  }
+}
+
+// ── CONSEIL ───────────────────────────────────────────────────────────────────
+function getAdvice(){
+  if(!G||!G.cards)return'Commence une nouvelle partie !';
+  const pop=countT('villager')+countT('baby');
+  const food=Object.values(G.cards).filter(c=>CD[c.type]?.food).reduce((s,c)=>s+(CD[c.type].food||0),0);
+  const swords=countT('sword')+countT('iron_sword');
+  const nextWave=G.moon%5===0?G.moon+5:Math.ceil(G.moon/5)*5;
+  const daysToWave=nextWave-G.moon;
+  const monsters=Object.values(G.cards).filter(c=>CD[c.type]?.monster);
+  if(monsters.length>0&&swords===0)
+    return'⚔️ URGENT : des monstres sont là sans épée ! Craft : Silex + Planche + Villageois → Épée';
+  if(monsters.length>0)
+    return'⚔️ Empile une ⚔️ sur chaque monstre avant qu\'il attaque !';
+  if(food<pop&&pop>0)
+    return'🍖 Tu manques de nourriture ce soir ! Cuisine des baies sur le feu (🫐+🔥) ou récolte des pommes.';
+  if(food<pop*1.5&&pop>0)
+    return'🍖 Stock de nourriture juste. Prépare un Ragoût (🍎+🔥 = 5 repas) pour avoir de la marge.';
+  if(daysToWave<=2&&swords===0)
+    return'⚠️ Vague dans '+daysToWave+' jour(s) ! Fabrique vite : Silex + Planche + Villageois → Épée';
+  if(daysToWave<=2)
+    return'⚠️ Vague dans '+daysToWave+' jour(s). Garde ton épée libre et prépare un Bouclier si possible.';
+  if(pop<=1)
+    return'👥 Un seul villageois, c\'est risqué ! Construis une 🏠 Maison pour avoir des Bébés.';
+  if(countT('campfire')===0)
+    return'🔥 Pas de Feu de camp ! Craft : Silex + Bois → Feu. Il double la valeur de ta nourriture.';
+  if(countT('forge')===0&&G.moon>=8&&countT('iron_ore')>0)
+    return'🔨 Tu as des Minerais ! Construis une Forge (3 Pierres + Planche + Villageois) pour l\'Épée de Fer.';
+  if(countT('cave_entrance')===0&&G.moon>=10)
+    return'🕳️ Essaie l\'expédition ! Craft : 4 Pierres + Villageois → Entrée de Grotte, puis empile des villageois dessus.';
+  if(countT('farm')===0&&G.moon>=6)
+    return'🌾 Construis une Ferme (2 Planches + Brique + Villageois) : elle produit des pommes en continu.';
+  return'✅ Tu gères bien ! Prépare-toi pour la prochaine vague au Jour '+nextWave+'. Stocke de la nourriture et des armes.';
+}
+function showConseilPopup(){
+  playSound('menu_click');
+  const old=document.getElementById('conseil-popup');if(old)old.remove();
+  const advice=getAdvice();
+  const el=document.createElement('div');
+  el.id='conseil-popup';
+  el.style.cssText='position:fixed;top:58px;left:50%;transform:translateX(-50%);background:rgba(10,20,50,.97);color:#bfdbfe;padding:14px 20px 12px;border-radius:12px;font-size:13.5px;z-index:99990;max-width:400px;width:92%;text-align:center;border:1px solid #3b82f6;box-shadow:0 4px 24px rgba(0,0,0,.7);line-height:1.7;cursor:pointer;';
+  el.innerHTML='<div style="font-size:11px;color:#6b7280;margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">💡 Conseil</div><div>'+advice+'</div><div style="font-size:10px;color:#4b5563;margin-top:8px;">Cliquer pour fermer</div>';
+  el.onclick=()=>el.remove();
+  document.body.appendChild(el);
+  setTimeout(()=>{if(el.parentNode)el.remove();},7000);
+}
 
 // ── EXPÉDITION ───────────────────────────────────────────────────────────────
 function execExpedition(sid){
