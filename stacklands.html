@@ -118,6 +118,30 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
 #mm-stats{color:#4ade80;font-size:12px;text-align:center;max-width:340px;line-height:1.7;min-height:18px;}
 @keyframes expedition-pulse{0%,100%{box-shadow:0 0 0 2px rgba(139,92,246,.8),0 3px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 0 6px rgba(139,92,246,1),0 0 22px rgba(139,92,246,.6)}}
 .expedition-active{animation:expedition-pulse .9s infinite;border-color:rgba(139,92,246,.8)!important;}
+/* ── MARCHÉ NOIR ─────────────────────────────────────────────────── */
+#bm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9100;justify-content:center;align-items:center;}
+.bm-box{background:linear-gradient(160deg,#07000f,#120020,#07000f);border:2px solid #7c3aed;border-radius:16px;padding:24px 26px 20px;max-width:500px;width:94%;color:#fff;box-shadow:0 0 50px rgba(124,58,237,.4);}
+.bm-header{text-align:center;margin-bottom:14px;}
+.bm-title-txt{font-size:22px;font-weight:900;color:#f7d060;letter-spacing:2px;}
+.bm-sub{font-size:12px;color:#9ca3af;margin-top:3px;}
+.bm-tier-badge{display:inline-block;margin-top:6px;background:rgba(124,58,237,.3);border:1px solid #7c3aed;border-radius:12px;padding:3px 12px;font-size:11px;color:#c4b5fd;}
+.bm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.bm-item{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.35);border-radius:10px;padding:12px 10px;text-align:center;transition:border-color .15s;}
+.bm-item:not(.bm-sold):hover{border-color:#a78bfa;}
+.bm-item.bm-sold{opacity:.35;border-color:rgba(75,85,99,.4);}
+.bm-emoji{font-size:28px;margin-bottom:4px;}
+.bm-name{font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:5px;}
+.bm-price{font-size:13px;color:#f7d060;margin-bottom:8px;font-weight:700;}
+.bm-buy{background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:12px;font-weight:700;width:100%;}
+.bm-buy:hover{background:#6d28d9;}.bm-buy:disabled{background:#374151;cursor:not-allowed;}
+@keyframes bm-appear{0%{opacity:0;transform:scale(.7) rotate(-2deg)}70%{transform:scale(1.04)}100%{opacity:1;transform:scale(1) rotate(0)}}
+.bm-box{animation:bm-appear .4s cubic-bezier(.17,.67,.36,1.3) forwards;}
+@keyframes bm-btn-pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.6)}50%{box-shadow:0 0 0 5px rgba(124,58,237,0)}}
+#bm-btn{animation:bm-btn-pulse 1.4s infinite;}
+/* ── VITESSE ─────────────────────────────────────────────────────── */
+#speed-btn{background:#0f1a0f;color:#86efac;border:1px solid #2d5a2d;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700;min-width:56px;text-align:center;}
+#speed-btn.fast{border-color:#f7d060;color:#f7d060;}
+#speed-btn.faster{border-color:#ef4444;color:#ef4444;}
 @keyframes famine-blink{0%,100%{color:#fca5a5}50%{color:#ef4444;text-shadow:0 0 8px rgba(239,68,68,.7);}}
 .famine-warn{animation:famine-blink .7s infinite;}
 /* ── SPAWN CARTE ── */
@@ -150,6 +174,8 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
   <button onclick="showRB()" style="background:#1a4a1a;color:#8f8;border:1px solid #4a8a4a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">📖 Recettes</button>
   <button onclick="tidyCards()" style="background:#1a2a4a;color:#93c5fd;border:1px solid #2d4a8a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">🗂️ Ranger</button>
   <button onclick="showConseilPopup()" style="background:#1a1a0a;color:#fde68a;border:1px solid #78716c;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">💡 Conseil</button>
+  <button id="bm-btn" onclick="showBlackMarket()" style="display:none;background:#07000f;color:#a78bfa;border:1px solid #7c3aed;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">🏴‍☠️ Marché</button>
+  <button id="speed-btn" onclick="toggleSpeed()">⏩ ×1</button>
   <span style="color:#666;font-size:11px;">Clic-droit=vendre | Échap=Pause</span>
 </div>
 
@@ -203,6 +229,19 @@ body{background:#1a3a1a;font-family:'Segoe UI',sans-serif;overflow:hidden;height
     <h3 style="margin-bottom:12px;font-size:18px;">📖 Recettes</h3>
     <div id="rlist"></div>
     <button onclick="closeRB()" style="margin-top:14px;background:#c0392b;color:#fff;border:none;padding:7px 18px;border-radius:6px;cursor:pointer;">Fermer</button>
+  </div>
+</div>
+
+<!-- ── MARCHÉ NOIR ── -->
+<div id="bm-overlay">
+  <div class="bm-box">
+    <div class="bm-header">
+      <div class="bm-title-txt">🏴‍☠️ MARCHÉ NOIR</div>
+      <div class="bm-sub" id="bm-sub"></div>
+      <div class="bm-tier-badge" id="bm-tier"></div>
+    </div>
+    <div class="bm-grid" id="bm-grid"></div>
+    <button onclick="closeBlackMarket()" style="background:#1a0a2a;color:#a78bfa;border:1px solid #7c3aed;border-radius:8px;padding:8px 0;width:100%;cursor:pointer;font-size:13px;font-weight:700;">Fermer ✕</button>
   </div>
 </div>
 
@@ -490,7 +529,7 @@ function loadGame(){
   G={gold:data.gold,moon:data.moon,moonProg:data.moonProg,moonDur:data.moonDur,nid:data.nid,
      cards:{},stacks:{},drag:null,ts:null,over:false,paused:false,secretReveal:false,
      _stats:data._stats||{crafts:0,kills:0,sells:0,blocks:0,babies:0},
-     _faminWarned:false,_unlockedPacks:new Set()};
+     _faminWarned:false,_unlockedPacks:new Set(),speed:1,blackMarket:null};
   document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
   document.getElementById('log').innerHTML='';
   ['overlay','victory','pause','main-menu'].forEach(id=>document.getElementById(id).style.display='none');
@@ -530,7 +569,9 @@ function buildShop(){
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 function initG(){
-  G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false,secretReveal:false,_stats:{crafts:0,kills:0,sells:0,blocks:0,babies:0},_faminWarned:false,_unlockedPacks:new Set()};
+  G={gold:5,moon:1,moonProg:0,moonDur:60,cards:{},stacks:{},nid:1,drag:null,ts:null,over:false,paused:false,secretReveal:false,_stats:{crafts:0,kills:0,sells:0,blocks:0,babies:0},_faminWarned:false,_unlockedPacks:new Set(),speed:1,blackMarket:null};
+  const sb=document.getElementById('speed-btn');if(sb){sb.textContent='⏩ ×1';sb.className='';sb.id='speed-btn';}
+  const bb=document.getElementById('bm-btn');if(bb)bb.style.display='none';
   document.getElementById('table').innerHTML='<div id="wave-alert"></div>';
   document.getElementById('log').innerHTML='';
   ['overlay','victory','pause','main-menu'].forEach(id=>document.getElementById(id).style.display='none');
@@ -778,7 +819,7 @@ function spawnWave(){
 function loop(ts){
   if(G.over||G.paused||G.secretReveal)return;
   if(!G.ts)G.ts=ts;
-  const dt=(ts-G.ts)/1000;G.ts=ts;
+  const dt=((ts-G.ts)/1000)*(G.speed||1);G.ts=ts;
   G.moonProg+=dt/G.moonDur;
   if(G.moonProg>=.8&&!G._faminWarned){
     G._faminWarned=true;
@@ -841,6 +882,13 @@ function endMoon(){
       if(!G._unlockedPacks.has(k)){G._unlockedPacks.add(k);showPackUnlockToast(p);}
     }
   });
+  // Expiry marché noir
+  if(G.blackMarket&&G.moon>G.blackMarket.expiresDay){
+    G.blackMarket=null;
+    const bb=document.getElementById('bm-btn');if(bb)bb.style.display='none';
+    document.getElementById('bm-overlay').style.display='none';
+    log('🏴‍☠️ Le Marché Noir a fermé ses portes.');
+  }
   checkAchievements();
   // Auto-save
   saveGame();
@@ -1002,6 +1050,97 @@ function showRB(){
 }
 function closeRB(){document.getElementById('rb').style.display='none';}
 
+// ── VITESSE ───────────────────────────────────────────────────────────────────
+function toggleSpeed(){
+  G.speed=(G.speed===1)?2:(G.speed===2)?3:1;
+  const btn=document.getElementById('speed-btn');
+  if(btn){
+    btn.textContent='⏩ ×'+G.speed;
+    btn.className='';btn.id='speed-btn';
+    if(G.speed===2)btn.classList.add('fast');
+    else if(G.speed===3)btn.classList.add('faster');
+  }
+  playSound('menu_click');
+}
+
+// ── MARCHÉ NOIR ───────────────────────────────────────────────────────────────
+const BM_POOLS={
+  gems:[
+    {type:'plank',   price:1,cur:'gem'},{type:'brick',      price:1,cur:'gem'},
+    {type:'iron_ore',price:1,cur:'gem'},{type:'flint',      price:1,cur:'gem'},
+    {type:'bone',    price:1,cur:'gem'},{type:'cooked_berry',price:1,cur:'gem'},
+    {type:'stone',   price:1,cur:'gem'},{type:'wood',       price:1,cur:'gem'},
+  ],
+  gold:[
+    {type:'sword',    price:4,cur:'gold'},{type:'shield',  price:3,cur:'gold'},
+    {type:'iron_ore', price:2,cur:'gold'},{type:'apple',   price:2,cur:'gold'},
+    {type:'plank',    price:2,cur:'gold'},{type:'stew',    price:3,cur:'gold'},
+    {type:'villager', price:6,cur:'gold'},{type:'brick',   price:2,cur:'gold'},
+  ],
+  both:[
+    {type:'iron_sword',price:3,cur:'gem'}, {type:'forge',   price:4,cur:'gem'},
+    {type:'farm',      price:3,cur:'gem'}, {type:'elixir',  price:2,cur:'gem'},
+    {type:'iron_sword',price:7,cur:'gold'},{type:'shield',  price:3,cur:'gold'},
+    {type:'stew',      price:2,cur:'gold'},{type:'iron_ore',price:2,cur:'gold'},
+    {type:'gem',       price:4,cur:'gold'},{type:'farm',    price:5,cur:'gold'},
+  ],
+};
+function generateBlackMarket(){
+  const exp=G._stats.expeditions||0;
+  const tier=exp<=2?'gems':exp<=4?'gold':'both';
+  const pool=[...BM_POOLS[tier]].sort(()=>Math.random()-.5);
+  const items=pool.slice(0,4).map(it=>({...it,sold:false}));
+  G.blackMarket={items,tier,expiresDay:G.moon+1};
+  const bb=document.getElementById('bm-btn');if(bb)bb.style.display='block';
+  log('🏴‍☠️ Un Marché Noir s\'est ouvert ! Disponible 1 jour.');
+  playSound('secret');
+}
+function showBlackMarket(){
+  if(!G.blackMarket)return;
+  playSound('menu_click');
+  const tierTxt={gems:'Accepte les 🔮 Gemmes',gold:'Accepte l\'🪙 Or',both:'Accepte 🔮 Gemmes & 🪙 Or'};
+  document.getElementById('bm-sub').textContent='Ferme au Jour '+(G.blackMarket.expiresDay+1)+' — Jour actuel : '+G.moon;
+  document.getElementById('bm-tier').textContent=tierTxt[G.blackMarket.tier];
+  renderBlackMarket();
+  document.getElementById('bm-overlay').style.display='flex';
+}
+function closeBlackMarket(){
+  document.getElementById('bm-overlay').style.display='none';
+  playSound('menu_click');
+}
+function renderBlackMarket(){
+  if(!G.blackMarket)return;
+  const curIcon={gem:'🔮',gold:'🪙'};
+  document.getElementById('bm-grid').innerHTML=G.blackMarket.items.map((it,i)=>{
+    const d=CD[it.type];if(!d)return'';
+    return`<div class="bm-item${it.sold?' bm-sold':''}">
+      <div class="bm-emoji">${d.e}</div>
+      <div class="bm-name">${d.n}</div>
+      <div class="bm-price">${it.price} ${curIcon[it.cur]}</div>
+      <button class="bm-buy" ${it.sold?'disabled':''} onclick="buyMarketItem(${i})">${it.sold?'Vendu':'Acheter'}</button>
+    </div>`;
+  }).join('');
+}
+function buyMarketItem(idx){
+  if(!G.blackMarket)return;
+  const it=G.blackMarket.items[idx];if(!it||it.sold)return;
+  if(it.cur==='gem'){
+    const gems=Object.values(G.cards).filter(c=>c.type==='gem');
+    if(gems.length<it.price){log('❌ Pas assez de gemmes !');playSound('error');return;}
+    gems.slice(0,it.price).forEach(c=>{if(c.sid)rmFromStack(c.id);delCard(c.id);});
+  }else{
+    if(G.gold<it.price){log('❌ Pas assez d\'or !');playSound('error');return;}
+    G.gold-=it.price;
+  }
+  const tbl=document.getElementById('table').getBoundingClientRect();
+  spawn(it.type,tbl.width/2+(Math.random()-.5)*140,tbl.height/2+(Math.random()-.5)*100);
+  it.sold=true;
+  log('🏴‍☠️ Acheté : '+CD[it.type].e+' '+CD[it.type].n);
+  playSound('buy_pack');
+  renderBlackMarket();
+  updateHUD();
+}
+
 // ── HINTS CONTEXTUELS ────────────────────────────────────────────────────────
 function hasSeenHint(id){try{return JSON.parse(localStorage.getItem('stacklands_hints')||'[]').includes(id);}catch(e){return false;}}
 function markHintSeen(id){
@@ -1100,6 +1239,9 @@ function execExpedition(sid){
   loot.forEach((type,i)=>{spawn(type,rx+(i%4)*(CW+10),ry+CH+48+Math.floor(i/4)*(CH+10));});
   spawnParticles(rx,ry);
   G._stats.expeditions=(G._stats.expeditions||0)+1;
+  // Chance de marché noir
+  const bmChance=(G._stats.expeditions<=1)?0.55:0.38;
+  if(!G.blackMarket&&Math.random()<bmChance)generateBlackMarket();
   if(deadId){
     log('⛏️ Expédition : un villageois n\'est pas revenu... Butin : '+loot.map(t=>CD[t].e).join(' '));
     playSound('monster_attack');
